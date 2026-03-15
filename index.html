@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>Delivery Tower - Sweat & Fair Spawn Update</title>
+	<style>
+		body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Courier New', monospace; }
+		canvas { background: #1a1a1a; box-shadow: 0 0 30px rgba(255,255,255,0.1); image-rendering: pixelated; touch-action: none; }
+	</style>
+</head>
+<body>
+	<canvas id="gameCanvas"></canvas>
+
+<script>
+/**
+ * [베테랑 파트너의 밸런스 및 연출 수정 노트]
+ * 1. 고양이 충돌 시 기존 스택 모션 유지 + 2초 조작 불가(Stun) 복구
+ * 2. 0층 스폰 시 플레이어 시작 지점 반경 80px 내 스폰 완전 차단 (부조리 억제)
+ * 3. 기사님 상시 땀방울 애니메이션 추가
+ */
+
+// ==========================================
+// 1. Assets (데이터 모듈)
+// ==========================================
+const PALETTE = { 
+	0: null, 1: '#000000', 2: '#2C3E50', 3: '#95A5A6', 4: '#34495E', 
+	5: '#7F8C8D', 6: '#F1C40F', 7: '#A0522D', 8: '#8B4513', 9: '#3498DB', 
+	'A': '#ECF0F1', 'C': '#E74C3C', 'D': '#FFCCAA', 'E': '#0055FF', 'F': '#EEEEEE', 'G': '#331A00',
+	'B': '#D2B48C', 'T': '#A08060', 'H': '#2ECC71', 'U': '#90EE90', 'V': '#2E8B57' 
+};
+
+const A='A', C='C', D='D', E='E', F='F', G='G', B='B', T='T', H='H', U='U', V='V';
+
+const ELEV_DATA = [[2,2,2,2,2,2,2,2],[2,C,C,2,2,C,C,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2]];
+const ENTRANCE_DATA = [[2,2,2,2,2,2,2,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,A,2,2,A,9,2],[2,9,A,2,2,A,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,2,2,2,2,2,2,2]];
+const GREEN_DOOR_DATA = [[V,V,V,V,V,V,V,V,V,V,V,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,1,1,U,V],[V,U,U,U,U,U,U,U,1,1,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V]];
+const YELLOW_DOOR_DATA = [[4,4,4,4,4,4,4,4,4,4,4,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,1,1,6,4],[4,6,6,6,6,6,6,6,1,1,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4]];
+const BEAM_DATA = [[4,4,4,4], [A,A,A,A], [5,5,5,5], [1,1,1,1]]; 
+const CAMERA_DATA = [[0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0],[0,0,1,1,5,5,5,5,5,1,1,0,0,0,0,0],[0,1,5,5,5,5,5,5,5,5,5,1,0,0,0,0],[1,5,5,1,1,1,1,1,1,1,5,5,1,0,0,0],[1,5,1,9,9,9,9,9,9,9,1,5,1,0,0,0],[1,5,1,9,1,9,9,9,1,9,1,5,1,0,0,0],[1,5,1,9,1,A,A,A,1,9,1,5,1,0,0,0],[1,5,1,9,1,9,9,9,1,9,1,5,1,0,0,0],[1,5,1,9,9,1,1,1,9,9,1,5,1,0,0,0],[1,5,5,1,1,1,1,1,1,1,5,5,1,0,0,0],[1,5,5,5,5,5,5,5,5,5,5,5,1,0,0,0],[0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0]];
+const BOX_DATA = [[B,B,B,B,B,B,B,B],[B,T,T,T,T,T,T,B],[B,T,B,B,B,B,T,B],[B,T,T,T,T,T,T,B],[B,B,B,B,B,B,B,B],[B,B,B,B,B,B,B,B],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]];
+
+const DRIVER_IDLE = [[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0], [0,0,0,0,1,1,1,E,E,1,1,1,0,0,0,0], [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0], [0,0,0,0,D,D,D,D,D,D,D,D,0,0,0,0], [0,0,0,0,D,1,D,D,D,D,1,D,0,0,0,0], [0,0,0,0,D,D,D,D,D,D,D,D,0,0,0,0], [0,0,0,0,0,D,D,1,1,D,D,0,0,0,0,0], [0,0,0,0,0,0,D,D,D,D,0,0,0,0,0,0], [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0], [0,0,0,0,1,E,E,1,1,E,E,1,0,0,0,0], [0,0,0,1,1,E,E,1,1,E,E,1,1,0,0,0], [0,0,1,1,0,E,E,1,1,E,E,0,1,1,0,0], [0,0,1,1,0,E,E,E,E,E,E,0,1,1,0,0], [0,F,F,F,0,E,E,E,E,E,E,0,F,F,F,0], [0,F,F,F,0,1,1,1,1,1,1,0,F,F,F,0], [0,0,F,0,0,1,1,1,1,1,1,0,0,F,0,0], [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,G,G,0,0,G,G,0,0,0,0,0], [0,0,0,0,G,G,G,0,0,G,G,G,0,0,0,0], [0,0,0,0,G,G,G,0,0,G,G,G,0,0,0,0]];
+const DRIVER_WALK = [[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0], [0,0,0,0,1,1,1,E,E,1,1,1,0,0,0,0], [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0], [0,0,0,0,D,D,D,D,D,D,D,D,0,0,0,0], [0,0,0,0,D,1,D,D,D,D,1,D,0,0,0,0], [0,0,0,0,D,D,D,D,D,D,D,D,0,0,0,0], [0,0,0,0,0,D,D,1,1,D,D,0,0,0,0,0], [0,0,0,0,0,0,D,D,D,D,0,0,0,0,0,0], [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0], [0,0,0,0,1,E,E,1,1,E,E,1,0,0,0,0], [0,0,0,1,1,E,E,1,1,E,E,1,1,0,0,0], [0,0,1,1,0,E,E,1,1,E,E,0,1,1,0,0], [0,0,1,1,0,E,E,E,E,E,E,0,1,1,0,0], [0,F,F,F,0,E,E,E,E,E,E,0,F,F,F,0], [0,F,F,F,0,1,1,1,1,1,1,0,F,F,F,0], [0,0,F,0,0,1,1,1,1,1,1,0,0,F,0,0], [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,G,G,0,0,0,0,G,G,0,0,0,0], [0,0,0,G,G,G,0,0,0,0,G,G,G,0,0,0], [0,0,0,G,G,G,0,0,0,0,G,G,G,0,0,0]];
+const DRIVER_LEAN = [[0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0], [0,1,1,1,E,E,1,1,1,0,0,0,0,0,0,0], [1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0], [0,0,D,D,D,D,D,D,D,D,0,0,0,0,0,0], [0,0,D,1,D,D,D,D,1,D,0,0,0,0,0,0], [0,0,D,D,D,D,D,D,D,D,0,0,0,0,0,0], [0,0,0,D,D,1,1,D,D,0,0,0,0,0,0,0], [0,0,0,0,D,D,D,D,0,0,0,0,0,0,0,0], [0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0], [0,0,1,E,E,1,1,E,E,1,0,0,0,0,0,0], [0,1,1,E,E,1,1,E,E,1,1,0,0,0,0,0], [1,1,0,E,E,1,1,E,E,0,1,1,0,0,0,0], [1,1,0,E,E,E,E,E,E,0,1,1,0,0,0,0], [F,F,F,0,E,E,E,E,E,E,0,F,F,F,0,0], [F,F,F,0,1,1,1,1,1,1,0,F,F,0,0,0], [0,F,0,0,1,1,1,1,1,1,0,0,F,0,0,0], [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,G,G,0,0,G,G,0,0,0,0,0], [0,0,0,0,G,G,G,0,0,G,G,G,0,0,0,0], [0,0,0,0,G,G,G,0,0,G,G,G,0,0,0,0]];
+
+const HEART_FULL = [[0,C,C,0,C,C,0], [C,C,C,C,C,C,C], [C,C,C,C,C,C,C], [0,C,C,C,C,C,0], [0,0,C,C,C,0,0], [0,0,0,C,0,0,0]];
+const HEART_HALF = [[0,C,C,0,3,3,0], [C,C,C,3,0,0,3], [C,C,C,0,0,0,3], [0,C,C,0,0,3,0], [0,0,C,0,3,0,0], [0,0,0,C,0,0,0]];
+const HEART_EMPTY= [[0,3,3,0,3,3,0], [3,0,0,3,0,0,3], [3,0,0,0,0,0,3], [0,3,0,0,0,3,0], [0,0,3,0,3,0,0], [0,0,0,3,0,0,0]];
+const BILL_1000  = [[9,9,9,9,9,9,9,9,9,9], [9,A,A,A,A,A,A,A,A,9], [9,A,9,9,A,A,9,9,A,9], [9,A,9,9,A,A,9,9,A,9], [9,A,A,A,A,A,A,A,A,9], [9,9,9,9,9,9,9,9,9,9]]; 
+const BILL_10000 = [[H,H,H,H,H,H,H,H,H,H], [H,A,A,A,A,A,A,A,A,H], [H,A,H,H,A,A,H,H,A,H], [H,A,H,H,A,A,H,H,A,H], [H,A,A,A,A,A,A,A,A,H], [H,H,H,H,H,H,H,H,H,H]]; 
+const BILL_50000 = [[6,6,6,6,6,6,6,6,6,6], [6,A,A,A,A,A,A,A,A,6], [6,A,6,6,A,A,6,6,A,6], [6,A,6,6,A,A,6,6,A,6], [6,A,A,A,A,A,A,A,A,6], [6,6,6,6,6,6,6,6,6,6]]; 
+const TRUCK_DATA = [[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0,0,0,0,0,0], [0,0,0,F,A,A,A,A,A,A,A,A,A,A,A,A,F,0,0,0,0,0,0,0], [0,0,0,F,A,F,F,F,F,F,F,F,F,F,F,A,F,0,0,0,0,0,0,0], [0,0,0,F,A,F,F,F,F,F,F,F,F,F,F,A,F,0,0,0,0,0,0,0], [0,0,0,F,A,F,F,F,F,F,F,F,F,F,F,A,F,9,9,9,0,0,0,0], [0,0,0,F,A,A,A,A,A,A,A,A,A,A,A,A,F,9,A,A,9,0,0,0], [0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,9,A,A,9,0,0,0], [0,0,0,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,0,0], [0,0,0,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,0,0], [0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0], [0,0,0,1,1,F,1,1,0,0,0,0,0,0,0,1,1,F,1,1,0,0,0,0], [0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0]];
+
+const ENEMY_VASE = [[0,0,0,0,0,0,0,0],[0,0,0,7,8,0,0,0],[0,0,8,7,8,0,0,0],[0,0,8,7,8,7,0,0],[0,8,7,8,7,8,0,0],[0,7,8,0,8,7,8,0],[0,8,0,0,7,8,8,0],[0,8,8,0,8,8,0,0]];
+const ENEMY_BANANA = [[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,1,0],[0,0,0,0,0,6,0,0],[0,0,6,6,6,0,0,0],[0,6,6,6,6,6,0,0],[0,6,0,0,0,6,6,0],[0,0,0,0,0,0,0,0]];
+const ENEMY_BASEBALL = [[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,A,A,0,0,0],[0,0,A,C,C,A,0,0],[0,A,C,A,A,C,A,0],[0,A,C,A,A,C,A,0],[0,0,A,C,C,A,0,0],[0,0,0,A,A,0,0,0]];
+const ENEMY_PIGEON1 = [[0,0,0,0,0,0,0,0],[0,0,0,5,5,0,0,0],[0,0,C,5,1,5,0,0],[0,0,0,5,5,5,5,0],[0,0,5,A,5,A,5,0],[0,0,5,5,5,5,5,0],[0,0,0,5,5,5,0,0],[0,0,0,6,0,6,0,0]];
+const ENEMY_PIGEON2 = [[0,0,0,0,0,0,0,0],[0,0,0,5,5,0,0,0],[0,0,C,5,1,5,0,0],[0,0,0,5,5,5,5,0],[0,0,5,A,5,A,5,0],[0,0,0,5,5,5,0,0],[0,0,0,5,5,5,0,0],[0,0,0,0,6,0,0,0]];
+const ENEMY_CAT = [[0,0,0,0,0,0,0,0],[0,F,0,0,0,F,0,0],[0,F,F,1,F,F,0,0],[0,F,1,F,F,F,F,0],[0,F,F,F,F,F,1,0],[0,F,1,F,F,1,F,0],[0,F,F,F,F,F,F,0],[0,0,F,0,F,0,F,0]];
+const ENEMY_TRASHBAG = [[0,0,0,0,1,0,0,0],[0,0,0,1,1,1,0,0],[0,0,1,1,3,1,0,0],[0,1,1,1,1,1,1,0],[0,1,3,1,1,1,1,0],[1,1,1,1,1,3,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0]];
+
+const BOSS_IDLE_1 = [[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,1,D,D,D,D,D,D,1,0,0,0,0],[0,0,0,0,1,D,1,D,D,1,D,1,0,0,0,0],[0,0,0,0,1,D,D,D,D,D,D,1,0,0,0,0],[0,0,0,0,0,1,D,1,1,D,1,0,0,0,0,0],[0,0,0,0,2,2,2,2,2,2,2,2,0,0,0,0],[0,0,0,2,F,2,2,C,C,2,2,F,2,0,0,0],[0,0,2,2,F,2,2,C,C,2,2,F,2,2,0,0],[0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],[0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0],[0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0]];
+const BOSS_IDLE_2 = [[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,1,D,D,D,D,D,D,1,0,0,0,0],[0,0,0,0,1,D,1,D,D,1,D,1,0,0,0,0],[0,0,0,0,1,D,D,D,D,D,D,1,0,0,0,0],[0,0,0,0,0,1,D,1,D,D,1,0,0,0,0,0],[0,0,0,0,2,2,2,2,2,2,2,2,0,0,0,0],[0,0,0,2,F,2,2,C,C,2,2,F,2,0,0,0],[0,0,2,2,F,2,2,C,C,2,2,F,2,2,0,0],[0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],[0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0],[0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0]];
+const DRIVER_BOW_1 = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,0,1,1,E,E,1,1,0,0,0,0,0],[0,0,0,0,0,1,E,E,E,E,1,0,0,0,0,0],[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,E,E,E,E,E,E,E,E,0,0,0,0],[0,0,0,E,E,E,E,E,E,E,E,E,E,0,0,0],[0,0,0,E,E,E,E,E,E,E,E,E,E,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,G,G,G,0,0,0,0,G,G,G,0,0,0],[0,0,0,G,G,G,0,0,0,0,G,G,G,0,0,0]];
+const DRIVER_BOW_2 = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,0,1,1,E,E,1,1,0,0,0,0,0],[0,0,0,0,0,1,E,E,E,E,1,0,0,0,0,0],[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,E,E,E,E,E,E,E,E,0,0,0,0],[0,0,0,E,E,E,E,E,E,E,E,E,E,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,G,G,G,0,0,0,0,G,G,G,0,0,0],[0,0,0,G,G,G,0,0,0,0,G,G,G,0,0,0]];
+const AMBULANCE = [[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0,0,0,0,0,0],[0,0,0,F,E,E,F,F,F,F,F,F,F,F,C,C,F,0,0,0,0,0,0,0],[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0,0,0],[0,0,0,F,F,F,F,F,F,C,C,F,F,F,F,F,F,F,A,A,F,0,0,0],[0,0,0,F,F,F,F,F,C,C,C,C,F,F,F,F,F,F,A,A,F,0,0,0],[0,0,0,F,F,F,F,F,F,C,C,F,F,F,F,F,F,F,F,F,F,F,0,0],[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0],[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0],[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0],[0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0],[0,0,0,1,1,5,1,1,0,0,0,0,0,0,0,1,1,5,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0]];
+
+// ★ 신규 상시 땀방울 애니메이션 에셋
+const EFFECT_SWEAT = [[0,9,0],[9,A,9],[9,9,9],[0,9,0]];
+
+// ==========================================
+// 2. Engine & Map Logic
+// ==========================================
+const MapGenerator = {
+	cache: {}, 
+	getStageData(stageNum) {
+		if (!this.cache[stageNum]) {
+			const packageCount = Math.floor(Math.random() * 5) + 2;
+			let doorPool = [];
+			for (let i = 0; i < 12; i++) doorPool.push(i < packageCount ? 1 : 0); 
+			for (let i = doorPool.length - 1; i > 0; i--) {
+				const j = Math.floor(Math.random() * (i + 1));
+				[doorPool[i], doorPool[j]] = [doorPool[j], doorPool[i]];
+			}
+			const floors = [];
+			for (let i = 0; i < 3; i++) floors.push({ doors: doorPool.slice(i * 4, (i + 1) * 4) });
+			this.cache[stageNum] = { floors: floors, totalPackages: packageCount };
+		}
+		return this.cache[stageNum];
+	}
+};
+
+const GameInfo = {
+	currentStage: 1, isTransitioning: false, cameraOffsetY: 0, transitionSpeed: 15, droppedBoxes: [],
+	score: 0, life: 5, isGameOver: false, gameOverReason: 'fired', timeFreeze: 0, flashTimer: 0,
+	gameOverTime: 0
+};
+
+const SmallEnemyManager = {
+	enemies: [],
+	initForStage(stage) {
+		this.enemies = [];
+		let count = stage < 3 ? 1 : 2; 
+		const types = ['vase', 'banana', 'baseball', 'trashbag', 'pigeon', 'cat'];
+		
+		let availableFloors = [0, 1, 2].sort(() => Math.random() - 0.5);
+
+		for(let i = 0; i < count; i++) {
+			if (availableFloors.length === 0) break;
+			let type = types[Math.floor(Math.random() * types.length)];
+			
+			let validFloor = -1;
+			let validDoorIdx = -1;
+			
+			for (let f of availableFloors) {
+				const stageData = MapGenerator.getStageData(GameInfo.currentStage);
+				let possibleDoors = [];
+				
+				// ★ 부조리(시작 지점 즉사) 방지 로직: 플레이어 시작 x 좌표
+				let playerStartX = Renderer.width - Renderer.elevWidth - 48 - 20; 
+
+				stageData.floors[f].doors.forEach((doorState, idx) => {
+					let doorStartX = Renderer.elevWidth + 16 + (idx * (Renderer.doorWidth + 16));
+					
+					// 녹색문(0)에 스폰하되, 0층일 경우 플레이어의 시작 좌표와 너무 가까우면 배제 (반경 80px)
+					if (doorState === 0) {
+						if (f === 0 && Math.abs(doorStartX - playerStartX) < 80) return; 
+						possibleDoors.push(idx); 
+					}
+				});
+				
+				if (possibleDoors.length > 0) {
+					validFloor = f;
+					validDoorIdx = possibleDoors[Math.floor(Math.random() * possibleDoors.length)];
+					break;
+				}
+			}
+
+			if (validFloor !== -1) {
+				availableFloors = availableFloors.filter(fl => fl !== validFloor); 
+				let doorStartX = Renderer.elevWidth + 16 + (validDoorIdx * (Renderer.doorWidth + 16));
+				let spawnX = type === 'pigeon' ? doorStartX : doorStartX + 10;
+				let boundaryEndX = type === 'pigeon' ? doorStartX + Renderer.doorWidth - 24 : 0;
+
+				this.enemies.push({
+					type: type, floor: validFloor, x: spawnX, y: 0, width: 24, height: 24, 
+					startX: spawnX, endX: boundaryEndX, 
+					vx: type === 'pigeon' ? 0.6 : 0, dir: 1, opacity: 0 
+				});
+			}
+		}
+	},
+
+	update() {
+		this.enemies.forEach(e => {
+			let floorY = Renderer.gameHeight - (e.floor * Renderer.floorHeight) - 16;
+			e.y = floorY - e.height; 
+			if (e.opacity < 1) e.opacity += 0.05; 
+
+			if (e.type === 'pigeon') {
+				e.x += e.vx * e.dir;
+				if (e.x >= e.endX) { e.x = e.endX; e.dir = -1; } 
+				else if (e.x <= e.startX) { e.x = e.startX; e.dir = 1; }
+			}
+		});
+	},
+	render(ctx, yOffset) {
+		this.enemies.forEach(e => {
+			let img = Renderer.assets['enemy_' + e.type];
+			if (e.type === 'pigeon') img = Renderer.assets[Math.floor(Date.now() / 200) % 2 === 0 ? 'enemy_pigeon1' : 'enemy_pigeon2'];
+			let catIdleY = (e.type === 'cat' && Math.floor(Date.now() / 400) % 2 === 0) ? Math.floor(Renderer.scale / 2) : 0;
+
+			ctx.save();
+			ctx.globalAlpha = Math.max(0, Math.min(1, e.opacity)); 
+			if (e.type === 'pigeon' && e.dir === -1) {
+				ctx.translate(e.x + e.width, e.y + yOffset);
+				ctx.scale(-1, 1);
+				ctx.drawImage(img, 0, 0);
+			} else {
+				ctx.drawImage(img, e.x, e.y + yOffset + catIdleY);
+			}
+			ctx.restore();
+		});
+	}
+};
+
+const ThiefSystem = {
+	active: false, boxesToSteal: [], progress: 0, targetFloor: 0, targetX: 0, 
+	isClearingStage: false, isMidGameAutoSteal: false, isFleeing: false, 
+
+	start(unphotoedBoxes, tFloor, tX, isClearing, isMidGame = false) {
+		this.active = true; this.progress = 0; this.targetFloor = tFloor; this.targetX = tX; 
+		this.isClearingStage = isClearing; this.isMidGameAutoSteal = isMidGame; this.isFleeing = false;
+
+		const stageData = MapGenerator.getStageData(GameInfo.currentStage);
+		const doors = stageData.floors[Player.currentFloorIndex].doors;
+		const originalGrayIndices = [];
+		doors.forEach((val, idx) => { if (val === 0) originalGrayIndices.push(idx); });
+
+		let singleBoxToSteal = [unphotoedBoxes[0]]; 
+
+		this.boxesToSteal = singleBoxToSteal.map(b => {
+			let thiefDoorX;
+			if (originalGrayIndices.length > 0) {
+				let randIdx = originalGrayIndices[Math.floor(Math.random() * originalGrayIndices.length)];
+				thiefDoorX = Renderer.elevWidth + 16 + (randIdx * (Renderer.doorWidth + 16)) + Renderer.doorWidth / 2;
+			} else {
+				thiefDoorX = Renderer.elevWidth / 2; 
+			}
+			return { box: b, doorX: thiefDoorX, originalBoxX: b.x };
+		});
+	},
+
+	update() {
+		if (!this.active) return;
+		if (this.isFleeing) {
+			this.progress -= 5; 
+			if (this.progress <= 0) {
+				this.active = false;
+				if (!this.isMidGameAutoSteal) {
+					if (this.isClearingStage) Player.executeClearStage();
+					else Player.executeTeleport(this.targetFloor, this.targetX);
+				}
+			}
+			return; 
+		}
+
+		this.progress += 2; 
+		if (this.progress >= 100) {
+			this.active = false;
+			this.boxesToSteal.forEach(steal => {
+				GameInfo.life -= 0.5; 
+				let idx = GameInfo.droppedBoxes.indexOf(steal.box);
+				if (idx > -1) GameInfo.droppedBoxes.splice(idx, 1);
+			});
+			
+			if (GameInfo.life <= 0) { 
+				GameInfo.gameOverReason = 'fired'; GameInfo.isGameOver = true; GameInfo.gameOverTime = Date.now();
+				return; 
+			}
+
+			if (!this.isMidGameAutoSteal) {
+				if (this.isClearingStage) Player.executeClearStage();
+				else Player.executeTeleport(this.targetFloor, this.targetX);
+			}
+		}
+	},
+
+	render(ctx) {
+		if (!this.active) return;
+		ctx.fillStyle = '#FFCCAA'; 
+		this.boxesToSteal.forEach(steal => {
+			let startX = steal.doorX; let endX = steal.box.x + 12; let baseY = Player.groundY - 20;
+			let currentX = startX;
+			if (this.progress < 50) currentX = startX + (endX - startX) * (this.progress / 50);
+			else { 
+				currentX = endX - (endX - startX) * ((this.progress - 50) / 50); 
+				if (!this.isFleeing) steal.box.x = currentX - 12; 
+			}
+			let left = Math.min(startX, currentX); let w = Math.abs(currentX - startX);
+			ctx.fillRect(left, baseY, w, 6); ctx.fillRect(currentX - 3, baseY - 2, 6, 10); 
+		});
+	}
+};
+
+const IntroSystem = {
+	active: false, truckX: -200, truckY: 0, opacity: 1.0, state: 'driving', waitTimer: 30,
+	init() {
+		this.active = true; this.truckX = -200; this.truckY = Renderer.gameHeight - 16 - (12 * 4); 
+		this.opacity = 1.0; this.state = 'driving'; this.waitTimer = 20; 
+	},
+	update() {
+		if (this.state === 'driving') {
+			this.truckX += 6; 
+			if (this.truckX >= Renderer.width - 150) this.state = 'waiting';
+		} else if (this.state === 'waiting') {
+			this.waitTimer--;
+			if (this.waitTimer <= 0) this.state = 'fading';
+		} else if (this.state === 'fading') {
+			this.opacity -= 0.03; 
+			if (this.opacity <= 0) this.active = false; 
+		}
+	},
+	render(ctx) {
+		if (!this.active) return;
+		ctx.save(); ctx.globalAlpha = Math.max(0, this.opacity);
+		ctx.drawImage(Renderer.assets['truck'], this.truckX, this.truckY);
+		ctx.restore();
+	}
+};
+
+const ParticleSystem = {
+	particles: [],
+	spawn(x, y, count, isBig) {
+		for(let i=0; i<count; i++) {
+			this.particles.push({
+				x: x, y: y,
+				vx: (Math.random() - 0.5) * (isBig ? 15 : 5), 
+				vy: Math.random() * -5 - (isBig ? 3 : 1),     
+				life: isBig ? 25 : 15, size: isBig ? Math.random() * 4 + 3 : 2      
+			});
+		}
+	},
+	update() {
+		this.particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life--; });
+		this.particles = this.particles.filter(p => p.life > 0);
+	},
+	render(ctx) {
+		ctx.fillStyle = 'rgba(200, 200, 200, 0.7)';
+		this.particles.forEach(p => { ctx.fillRect(p.x, p.y, p.size, p.size); });
+	}
+};
+
+// ==========================================
+// 3. Renderer (UI 및 배경)
+// ==========================================
+const Renderer = {
+	ctx: null, width: 400, height: 700, gameHeight: 600, uiHeight: 100, scale: 5, 
+	floorHeight: 0, assets: {}, beamPattern: null, elevWidth: 0, doorWidth: 0, objHeight: 0, 
+
+	init(canvasId) {
+		const canvas = document.getElementById(canvasId);
+		canvas.width = this.width; canvas.height = this.height;
+		this.ctx = canvas.getContext('2d');
+		this.floorHeight = this.gameHeight / 3; 
+		this.elevWidth = 8 * this.scale; this.doorWidth = 12 * this.scale; this.objHeight = 24 * this.scale; 
+	},
+
+	preRender(name, data, s) {
+		const offCanvas = document.createElement('canvas');
+		offCanvas.width = data[0].length * s; offCanvas.height = data.length * s;
+		const oCtx = offCanvas.getContext('2d');
+		for (let r = 0; r < data.length; r++) {
+			for (let c = 0; c < data[r].length; c++) {
+				if (data[r][c] !== 0 && PALETTE[data[r][c]]) {
+					oCtx.fillStyle = PALETTE[data[r][c]];
+					oCtx.fillRect(c * s, r * s, s, s);
+				}
+			}
+		}
+		this.assets[name] = offCanvas;
+		if (name === 'beam') this.beamPattern = this.ctx.createPattern(offCanvas, 'repeat-x');
+	},
+
+	drawStageBlock(stageNum, yOffset) {
+		this.ctx.fillStyle = '#1A1A24'; this.ctx.fillRect(0, yOffset, this.width, this.gameHeight);
+		const stageData = MapGenerator.getStageData(stageNum);
+		const baseFloor = (stageNum - 1) * 3 + 1;
+		for (let i = 0; i < 3; i++) {
+			const floorTopY = yOffset + this.gameHeight - ((i + 1) * this.floorHeight);
+			const floorBottomY = floorTopY + this.floorHeight;
+			this.ctx.fillStyle = this.beamPattern;
+			this.ctx.fillRect(0, floorBottomY - 16, this.width, 16);
+			const baseY = floorBottomY - 16 - this.objHeight;
+			
+			this.ctx.drawImage(this.assets['elev'], 0, baseY); 
+			this.ctx.drawImage((baseFloor + i === 1) ? this.assets['entrance'] : this.assets['elev'], this.width - this.elevWidth, baseY); 
+			
+			const gap = 16; 
+			stageData.floors[i].doors.forEach((doorState, index) => {
+				const doorX = this.elevWidth + gap + (index * (this.doorWidth + gap));
+				this.ctx.drawImage(doorState === 1 ? this.assets['yellowDoor'] : this.assets['greenDoor'], doorX, baseY);
+			});
+		}
+	},
+
+	drawDroppedBoxes(yOffset) {
+		GameInfo.droppedBoxes.forEach(box => {
+			this.ctx.drawImage(this.assets['box'], box.x, box.y + yOffset);
+			if (box.photographed) {
+				this.ctx.fillStyle = '#2ECC71';
+				this.ctx.fillRect(box.x + 8, box.y + yOffset - 4, 8, 8);
+			}
+		});
+	},
+
+	drawUI() {
+		this.ctx.fillStyle = '#1A252C'; this.ctx.fillRect(0, this.gameHeight, this.width, this.uiHeight);
+		this.ctx.fillStyle = '#E74C3C'; this.ctx.fillRect(0, this.gameHeight, this.width, 4);
+		
+		this.ctx.textAlign = 'left'; this.ctx.font = '11px "Malgun Gothic", sans-serif'; this.ctx.fillStyle = '#BDC3C7';
+		this.ctx.fillText("⬅️➡️ 스와이프: 걷기", 15, this.gameHeight + 30);
+		this.ctx.fillText("⬆️ 스와이프: 상체 기울이기", 15, this.gameHeight + 50);
+		this.ctx.fillText("⬇️ 스와이프: 택배 놓기", 15, this.gameHeight + 70);
+		this.ctx.fillText("더블 탭: 점프", 15, this.gameHeight + 90);
+
+		const camImg = this.assets['camera'];
+		const camX = this.width - 120; 
+		const camY = this.gameHeight + 15;
+		this.ctx.drawImage(camImg, camX, camY);
+		this.ctx.fillStyle = '#ECF0F1'; this.ctx.font = 'bold 12px monospace'; this.ctx.textAlign = 'center';
+		this.ctx.fillText("TAKE PHOTO", camX + camImg.width / 2, camY + camImg.height + 15);
+
+		let currentBillImg = this.assets['bill_1000']; 
+		if (GameInfo.score >= 50000) currentBillImg = this.assets['bill_50000']; 
+		else if (GameInfo.score >= 10000) currentBillImg = this.assets['bill_10000']; 
+		
+		this.ctx.drawImage(currentBillImg, 15, 15);
+		this.ctx.fillStyle = '#FFF'; this.ctx.textAlign = 'left'; this.ctx.font = 'bold 18px monospace';
+		this.ctx.fillText(` ${GameInfo.score.toLocaleString()}₩`, 15 + currentBillImg.width + 5, 33);
+
+		const heartSize = 14; const heartStartX = this.width - 15 - (5 * 20); 
+		for(let i = 0; i < 5; i++) {
+			let hImg = this.assets['heart_empty'];
+			if (GameInfo.life >= i + 1) hImg = this.assets['heart_full'];
+			else if (GameInfo.life > i) hImg = this.assets['heart_half']; 
+			this.ctx.drawImage(hImg, heartStartX + (i * 20), 15, heartSize, heartSize);
+		}
+
+		if (GameInfo.isGameOver) {
+			this.ctx.fillStyle = 'rgba(0, 0, 0, 0.85)'; 
+			this.ctx.fillRect(0, 0, this.width, this.height); 
+			
+			if (GameInfo.gameOverReason === 'hospital') {
+				let elapsed = Date.now() - GameInfo.gameOverTime;
+				let ambX = -200;
+				let ambY = this.gameHeight / 2 + 100;
+				
+				if (elapsed < 2000) {
+					ambX = -200 + (elapsed / 2000) * (this.width / 2 + 100);
+				} else if (elapsed < 4000) {
+					ambX = this.width / 2 - 100;
+					this.ctx.drawImage(this.assets['driver_lean'], this.width / 2 - 20, ambY + 20);
+				} else {
+					ambX = this.width / 2 - 100 + ((elapsed - 4000) / 2000) * (this.width);
+				}
+				
+				this.ctx.drawImage(this.assets['ambulance'], ambX, ambY);
+			}
+
+			this.ctx.fillStyle = '#E74C3C';
+			this.ctx.textAlign = 'center';
+			this.ctx.font = 'bold 28px "Malgun Gothic", sans-serif';
+			
+			let goText = GameInfo.gameOverReason === 'hospital' ? "당신은 병원에 가게 되었습니다" : "당신은 해고 되었습니다";
+			this.ctx.fillText(goText, this.width / 2, this.gameHeight / 2 - 40);
+			
+			this.ctx.fillStyle = '#F1C40F';
+			this.ctx.font = 'bold 20px monospace';
+			this.ctx.fillText(`최종 수익: ${GameInfo.score.toLocaleString()}₩`, this.width / 2, this.gameHeight / 2 + 10);
+			
+			if (Math.floor(Date.now() / 500) % 2 === 0) {
+				this.ctx.fillStyle = '#ECF0F1';
+				this.ctx.font = 'bold 18px "Malgun Gothic", sans-serif';
+				this.ctx.fillText("> 인생 역전 다시 시작하기 <", this.width / 2, this.gameHeight / 2 + 70);
+			}
+
+			if (GameInfo.gameOverReason === 'fired') {
+				let animTick = Math.floor(Date.now() / 400) % 2 === 0;
+				let bossImg = this.assets[animTick ? 'boss_idle_1' : 'boss_idle_2'];
+				let bowImg = this.assets[animTick ? 'driver_bow_1' : 'driver_bow_2'];
+				
+				this.ctx.drawImage(bossImg, this.width / 2 - 60, this.gameHeight / 2 + 120);
+				this.ctx.drawImage(bowImg, this.width / 2 + 10, this.gameHeight / 2 + 120);
+			}
+		}
+	},
+
+	clear() {
+		this.ctx.fillStyle = '#000'; this.ctx.fillRect(0, 0, this.width, this.height);
+	}
+};
+
+// ==========================================
+// 4. Player & Input (물리 및 조작 로직)
+// ==========================================
+const Player = {
+	x: 0, y: 0, width: 48, height: 72, 
+	vx: 0, vy: 0, speed: 2.56, jumpPower: -19.5, gravity: 1.4, 
+	isGrounded: false, isDodging: false, facingRight: false, isStunned: false, stunTimer: 0,
+	groundY: 0, dodgeTimer: 0, savedVx: 0, stopTime: 0, packages: 0, currentFloorIndex: 0, teleportCooldown: 0,
+	
+	isSlipping: false, slipTimer: 0, 
+	catTimer: 0, 
+	invincibleTimer: 0,
+
+	init() { this.resetForNewStage(); },
+
+	resetForNewStage() {
+		const currentStageData = MapGenerator.getStageData(GameInfo.currentStage);
+		this.packages = currentStageData.totalPackages; 
+		this.currentFloorIndex = 0; this.teleportCooldown = 60; 
+		this.x = Renderer.width - Renderer.elevWidth - this.width - 20; 
+		this.updateGroundY(); this.vx = 0; this.savedVx = 0;
+		
+		this.isSlipping = false; this.slipTimer = 0;
+		this.catTimer = 0; 
+		this.invincibleTimer = 0;
+		this.isStunned = false; // 스턴 초기화
+
+		SmallEnemyManager.initForStage(GameInfo.currentStage);
+	},
+
+	updateGroundY() {
+		this.groundY = Renderer.gameHeight - (this.currentFloorIndex * Renderer.floorHeight) - 16;
+		this.y = this.groundY - this.height;
+	},
+
+	walk(direction) {
+		if (this.isDodging || this.isStunned || this.isSlipping) return; 
+		if (direction === 'right') { this.vx = this.speed; this.facingRight = true; }
+		else if (direction === 'left') { this.vx = -this.speed; this.facingRight = false; }
+		this.savedVx = this.vx; 
+	},
+	stop() { 
+		if (this.vx !== 0) { this.savedVx = this.vx; this.stopTime = new Date().getTime(); }
+		this.vx = 0; 
+	},
+	jump() {
+		if (this.isGrounded && !this.isDodging && !this.isStunned && !this.isSlipping) {
+			this.vy = this.jumpPower; this.isGrounded = false;
+		}
+	},
+	dodge() {
+		if (this.isGrounded && !this.isDodging && !this.isStunned && !this.isSlipping) {
+			this.isDodging = true; const currentMove = this.vx; this.vx = 0; 
+			clearTimeout(this.dodgeTimer);
+			this.dodgeTimer = setTimeout(() => { this.isDodging = false; this.vx = currentMove; }, 500); 
+		}
+	},
+
+	dropPackage() {
+		if (this.isGrounded && !this.isDodging && !this.isStunned && !this.isSlipping && this.packages > 0) {
+			this.savedVx = this.vx; this.vx = 0; this.isStunned = true; this.packages--; 
+
+			let playerCenterX = this.x + this.width / 2;
+			let stageData = MapGenerator.getStageData(GameInfo.currentStage);
+			let currentDoors = stageData.floors[this.currentFloorIndex].doors;
+
+			let nearestDist = 9999; let nearestIdx = -1; let nearestDoorX = 0;
+			for(let i=0; i < currentDoors.length; i++) {
+				let doorStartX = Renderer.elevWidth + 16 + (i * (Renderer.doorWidth + 16));
+				let doorCenterX = doorStartX + (Renderer.doorWidth / 2);
+				let dist = Math.abs(playerCenterX - doorCenterX);
+				if (dist < nearestDist) {
+					nearestDist = dist; nearestIdx = i; nearestDoorX = doorStartX;
+				}
+			}
+
+			let snappedBoxX = nearestDoorX + (Renderer.doorWidth / 2) - 12;
+
+			GameInfo.droppedBoxes.push({
+				x: snappedBoxX, y: this.groundY - 24, floor: this.currentFloorIndex, photographed: false, timer: 0
+			});
+			
+			let isSuccess = false;
+			if(currentDoors[nearestIdx] === 1) {
+				isSuccess = true; currentDoors[nearestIdx] = 2; 
+			}
+
+			if (isSuccess) {
+				GameInfo.score += 1000; ParticleSystem.spawn(snappedBoxX + 12, this.y, 10, true); 
+			} else {
+				GameInfo.life -= 1; 
+				if (GameInfo.life <= 0) { GameInfo.gameOverReason = 'fired'; GameInfo.isGameOver = true; GameInfo.gameOverTime = Date.now(); }
+			}
+
+			clearTimeout(this.stunTimer);
+			this.stunTimer = setTimeout(() => { this.isStunned = false; this.vx = this.savedVx; }, 500); 
+		}
+	},
+
+	teleport(targetFloor, targetX) {
+		if (this.isStunned) return; // 텔레포트 중에도 스턴 방지
+		let unphotoed = GameInfo.droppedBoxes.filter(b => b.floor === this.currentFloorIndex && !b.photographed);
+		if (unphotoed.length > 0) {
+			ThiefSystem.start([unphotoed[0]], targetFloor, targetX, false);
+			return; 
+		}
+		this.executeTeleport(targetFloor, targetX);
+	},
+
+	executeTeleport(targetFloor, targetX) {
+		this.currentFloorIndex = targetFloor; this.x = targetX; this.updateGroundY();
+		this.teleportCooldown = 60; 
+		if (this.x < Renderer.width / 2) this.walk('right'); else this.walk('left');
+	},
+
+	clearStage() {
+		let unphotoed = GameInfo.droppedBoxes.filter(b => b.floor === this.currentFloorIndex && !b.photographed);
+		if (unphotoed.length > 0) {
+			ThiefSystem.start([unphotoed[0]], 0, 0, true);
+			return;
+		}
+		this.executeClearStage();
+	},
+
+	executeClearStage() {
+		if (this.packages > 0) {
+			GameInfo.life -= this.packages * 1.0;
+			this.packages = 0; 
+			if (GameInfo.life <= 0) { GameInfo.gameOverReason = 'fired'; GameInfo.isGameOver = true; GameInfo.gameOverTime = Date.now(); return; }
+		}
+		GameInfo.isTransitioning = true;
+		this.vx = 0; this.savedVx = 0;
+	},
+
+	update() {
+		if (GameInfo.isGameOver) return; 
+
+		if (this.invincibleTimer > 0) this.invincibleTimer--;
+
+		if (this.isSlipping) {
+			this.slipTimer--;
+			if (this.slipTimer <= 0) { this.isSlipping = false; this.vx = this.savedVx; }
+		}
+		
+		// ★ 고양이 탑승 타이머 업데이트 및 속박(Stun) 해제 처리
+		if (this.catTimer > 0) {
+			this.catTimer--;
+			if (this.catTimer <= 0) {
+				this.isStunned = false; // 스턴 해제
+				this.vx = this.savedVx; // 기존 방향 복구
+			}
+		}
+
+		if (this.invincibleTimer <= 0 && !this.isSlipping) {
+			SmallEnemyManager.enemies.forEach((e, index) => {
+				if (e.floor === this.currentFloorIndex) {
+					if (this.x < e.x + e.width && this.x + this.width > e.x &&
+						this.y < e.y + e.height && this.y + this.height > e.y) {
+						
+						if (e.type === 'cat') {
+							// ★ 고양이 충돌: 패널티 속박(Stun) 복구
+							this.catTimer = 120; // 2초간 택배 최상단에 머무름
+							this.isStunned = true; // 2초간 모든 조작 불가
+							this.savedVx = this.vx; // 현재 속도 저장
+							this.vx = 0; // 즉시 정지
+							
+							SmallEnemyManager.enemies.splice(index, 1); 
+							ParticleSystem.spawn(this.x + this.width/2, this.y + this.height/2, 20, true);
+						} else {
+							GameInfo.life -= 0.5; 
+							if (GameInfo.life <= 0) { GameInfo.gameOverReason = 'hospital'; GameInfo.isGameOver = true; GameInfo.gameOverTime = Date.now(); return; }
+							
+							this.isSlipping = true; this.slipTimer = 30; 
+							this.savedVx = this.vx; this.vx = 0;
+							this.invincibleTimer = 30 + 120; 
+							ParticleSystem.spawn(this.x + this.width/2, this.y + this.height/2, 10, true);
+						}
+					}
+				}
+			});
+		}
+
+		let wasGrounded = this.isGrounded;
+		this.vy += this.gravity; this.x += this.vx; this.y += this.vy;
+
+		if (this.isGrounded && Math.abs(this.vx) > 0 && !this.isSlipping) {
+			if (Math.random() < 0.3) ParticleSystem.spawn(this.x + this.width / 2 + (Math.random() * 10 - 5), this.groundY, 1, false);
+		}
+
+		if (this.y + this.height >= this.groundY) {
+			this.y = this.groundY - this.height; this.vy = 0; this.isGrounded = true;
+			
+			if (this.vx !== 0) {
+				this.vx = Math.sign(this.vx) * this.speed;
+				this.savedVx = this.vx;
+			}
+			
+			if (!wasGrounded) ParticleSystem.spawn(this.x + this.width / 2, this.groundY, 15, true);
+		}
+
+		if (this.x < 0) { this.x = 0; this.vx = 0; this.savedVx = 0; }
+		if (this.x > Renderer.width - this.width) { this.x = Renderer.width - this.width; this.vx = 0; this.savedVx = 0; }
+
+		if (this.teleportCooldown > 0) {
+			this.teleportCooldown--;
+		} else {
+			const leftZone = 0; const rightZone = Renderer.width - Renderer.elevWidth;
+			if (this.x <= leftZone + 10) {
+				if (this.currentFloorIndex === 0) this.teleport(1, leftZone + 20);       
+				else if (this.currentFloorIndex === 1) this.teleport(0, leftZone + 20); 
+				else if (this.currentFloorIndex === 2) this.clearStage();               
+			} 
+			else if (this.x >= rightZone - 10) {
+				if (this.currentFloorIndex === 1) this.teleport(2, rightZone - 20 - this.width);       
+				else if (this.currentFloorIndex === 2) this.teleport(1, rightZone - 20 - this.width); 
+			}
+		}
+	},
+
+	render() {
+		let spriteKey = 'driver_idle';
+		if (this.isDodging) spriteKey = 'driver_lean';
+		else if (this.isGrounded && Math.abs(this.vx) > 0) spriteKey = Math.floor(Date.now() / 150) % 2 === 0 ? 'driver_walk' : 'driver_idle';
+
+		const img = Renderer.assets[spriteKey];
+		let yOffset = (!this.isDodging && !this.isStunned && this.isGrounded && this.vx === 0 && Math.floor(Date.now() / 400) % 2 === 0 && !this.isSlipping) ? Math.floor(Renderer.scale) : 0;
+
+		Renderer.ctx.save();
+		if (this.invincibleTimer > 0 && Math.floor(Date.now() / 100) % 2 === 0) Renderer.ctx.globalAlpha = 0.5;
+
+		let drawX = this.x; let drawY = this.y + yOffset;
+
+		if (this.isSlipping) {
+			Renderer.ctx.translate(drawX + this.width / 2, drawY + this.height);
+			Renderer.ctx.rotate(this.facingRight ? -Math.PI/2 : Math.PI/2);
+			Renderer.ctx.translate(-(drawX + this.width / 2), -(drawY + this.height));
+		}
+
+		if (!this.facingRight) {
+			Renderer.ctx.translate(drawX + this.width, drawY);
+			Renderer.ctx.scale(-1, 1); Renderer.ctx.drawImage(img, 0, 0);
+		} else {
+			Renderer.ctx.drawImage(img, drawX, drawY);
+		}
+		Renderer.ctx.restore();
+
+		// ★ [수정] 라이프가 2개 이하일 때만 당황해서 땀을 흘리는 애니메이션 출력
+		// 라이프 수치가 2.0 이하(하트 2개 이하)인 위기 상황에서만 작동합니다.
+		if (GameInfo.life <= 2 && !GameInfo.isGameOver) {
+			let sweatBounce = Math.floor(Date.now() / 200) % 2 === 0 ? 0 : 3;
+			// 기사님 얼굴 근처 위치에 땀방울 렌더링
+			Renderer.ctx.drawImage(
+				Renderer.assets['effect_sweat'], 
+				drawX + this.width - 15, 
+				drawY + 10 + sweatBounce
+			);
+		}
+		let handBaseY = this.y + 15 + yOffset;
+
+		for (let i = 0; i < this.packages; i++) {
+			Renderer.ctx.drawImage(Renderer.assets['box'], this.x + 12, handBaseY - (i * 18));
+		}
+
+		if (this.catTimer > 0) {
+			Renderer.ctx.save();
+			if (this.catTimer < 30) {
+				Renderer.ctx.globalAlpha = this.catTimer / 30;
+			}
+			let catDrawY = handBaseY - (this.packages * 18) - 10;
+			Renderer.ctx.drawImage(Renderer.assets['enemy_cat'], this.x + 12, catDrawY);
+			Renderer.ctx.restore();
+		}
+	}
+};
+
+function restartGame() {
+	GameInfo.score = 0; GameInfo.life = 5; GameInfo.currentStage = 1; GameInfo.isGameOver = false; GameInfo.droppedBoxes = [];
+	GameInfo.timeFreeze = 0; GameInfo.flashTimer = 0;
+	MapGenerator.cache = {}; 
+	SmallEnemyManager.enemies = [];
+	ThiefSystem.active = false;
+	ParticleSystem.particles = [];
+	Player.init(); 
+	IntroSystem.init(); 
+}
+
+function takePhoto() {
+	if (GameInfo.isGameOver || IntroSystem.active || GameInfo.timeFreeze > 0) return;
+	GameInfo.timeFreeze = 30; GameInfo.flashTimer = 5;  
+	
+	let currentBoxes = GameInfo.droppedBoxes.filter(b => b.floor === Player.currentFloorIndex && !b.photographed);
+	currentBoxes.forEach(b => b.photographed = true);
+
+	if (ThiefSystem.active && !ThiefSystem.isFleeing) {
+		ThiefSystem.isFleeing = true; 
+		ThiefSystem.boxesToSteal.forEach(steal => {
+			steal.box.photographed = true;
+			steal.box.x = steal.originalBoxX; 
+		});
+	}
+}
+
+const InputManager = {
+	startX: 0, startY: 0, threshold: 30, lastTapTime: 0,
+	init() {
+		const canvas = document.getElementById('gameCanvas');
+		window.addEventListener('pointerdown', (e) => { 
+			const rect = canvas.getBoundingClientRect();
+			const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height;
+			const cx = (e.clientX - rect.left) * scaleX; const cy = (e.clientY - rect.top) * scaleY;
+			
+			if (GameInfo.isGameOver) return; 
+			if (IntroSystem.active) return;
+
+			const camX = Renderer.width - 120; const camY = Renderer.gameHeight + 15;
+			const camImgWidth = Renderer.assets['camera'].width; const camImgHeight = Renderer.assets['camera'].height;
+
+			if (cx >= camX - 10 && cx <= camX + camImgWidth + 10 && cy >= camY - 10 && cy <= camY + camImgHeight + 40) {
+				takePhoto(); this.startX = -9999; return;
+			}
+			this.startX = e.clientX; this.startY = e.clientY; 
+		});
+		window.addEventListener('pointerup', (e) => {
+			const rect = canvas.getBoundingClientRect();
+			const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height;
+			const cx = (e.clientX - rect.left) * scaleX; const cy = (e.clientY - rect.top) * scaleY;
+
+			if (GameInfo.isGameOver) { 
+				if (cx > 50 && cx < Renderer.width - 50 && cy > Renderer.gameHeight / 2 + 50 && cy < Renderer.gameHeight / 2 + 90) {
+					restartGame(); 
+				}
+				return; 
+			}
+			if (IntroSystem.active || this.startX === -9999 || GameInfo.timeFreeze > 0) return;
+
+			const dx = e.clientX - this.startX; const dy = e.clientY - this.startY;
+			const currentTime = new Date().getTime();
+			
+			if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+				if (currentTime - this.lastTapTime < 300) {
+					if (Player.savedVx !== 0) Player.vx = Player.savedVx * 2;
+					else if (Player.vx !== 0) Player.vx = Player.vx * 2;
+					Player.jump();
+				}
+				this.lastTapTime = currentTime; return;
+			}
+			if (Math.abs(dx) > Math.abs(dy)) {
+				if (dx > this.threshold) Player.walk('right'); else if (dx < -this.threshold) Player.walk('left');
+			} else {
+				if (dy < -this.threshold) Player.dodge(); else if (dy > this.threshold) Player.dropPackage();
+			}
+		});
+	}
+};
+
+// ==========================================
+// 5. Engine Boot (최종 조립)
+// ==========================================
+const Engine = {
+	start() {
+		Renderer.init('gameCanvas');
+		Renderer.preRender('elev', ELEV_DATA, Renderer.scale); Renderer.preRender('entrance', ENTRANCE_DATA, Renderer.scale);
+		Renderer.preRender('greenDoor', GREEN_DOOR_DATA, Renderer.scale); Renderer.preRender('yellowDoor', YELLOW_DOOR_DATA, Renderer.scale);
+		Renderer.preRender('beam', BEAM_DATA, 4); Renderer.preRender('camera', CAMERA_DATA, 3); 
+		Renderer.preRender('box', BOX_DATA, 3); Renderer.preRender('driver_idle', DRIVER_IDLE, 3);
+		Renderer.preRender('driver_walk', DRIVER_WALK, 3); Renderer.preRender('driver_lean', DRIVER_LEAN, 3);
+		Renderer.preRender('heart_full', HEART_FULL, 2); Renderer.preRender('heart_half', HEART_HALF, 2); 
+		Renderer.preRender('heart_empty', HEART_EMPTY, 2); Renderer.preRender('bill_1000', BILL_1000, 3); 
+		Renderer.preRender('bill_10000', BILL_10000, 3); Renderer.preRender('bill_50000', BILL_50000, 3); 
+		Renderer.preRender('truck', TRUCK_DATA, 4); 
+		Renderer.preRender('enemy_vase', ENEMY_VASE, 3); Renderer.preRender('enemy_banana', ENEMY_BANANA, 3);
+		Renderer.preRender('enemy_baseball', ENEMY_BASEBALL, 3); 
+		Renderer.preRender('enemy_trashbag', ENEMY_TRASHBAG, 3); 
+		Renderer.preRender('enemy_pigeon1', ENEMY_PIGEON1, 3); Renderer.preRender('enemy_pigeon2', ENEMY_PIGEON2, 3);
+		Renderer.preRender('enemy_cat', ENEMY_CAT, 3);
+		
+		Renderer.preRender('boss_idle_1', BOSS_IDLE_1, 4); Renderer.preRender('boss_idle_2', BOSS_IDLE_2, 4);
+		Renderer.preRender('driver_bow_1', DRIVER_BOW_1, 4); Renderer.preRender('driver_bow_2', DRIVER_BOW_2, 4);
+		Renderer.preRender('ambulance', AMBULANCE, 4);
+		
+		Renderer.preRender('effect_sweat', EFFECT_SWEAT, 3); // ★ 땀방울 등록
+
+		InputManager.init(); Player.init(); IntroSystem.init(); 
+		this.loop();
+	},
+	loop() {
+		if (GameInfo.isGameOver) { 
+			Renderer.clear(); Renderer.ctx.save();
+			Renderer.ctx.beginPath(); Renderer.ctx.rect(0, 0, Renderer.width, Renderer.gameHeight); Renderer.ctx.clip(); 
+			Renderer.drawStageBlock(GameInfo.currentStage, 0); 
+			Renderer.ctx.restore(); Renderer.drawUI(); 
+			requestAnimationFrame(() => Engine.loop()); 
+			return; 
+		}
+
+		if (GameInfo.timeFreeze > 0) { GameInfo.timeFreeze--; ParticleSystem.update(); } 
+		else if (ThiefSystem.active) { ThiefSystem.update(); ParticleSystem.update(); } 
+		else if (IntroSystem.active) { IntroSystem.update(); } 
+		else {
+			ParticleSystem.update(); SmallEnemyManager.update(); 
+			
+			let autoStealTarget = null;
+			GameInfo.droppedBoxes.forEach(b => {
+				if (!b.photographed) {
+					b.timer++;
+					if (b.timer >= 120 && b.floor === Player.currentFloorIndex) {
+						autoStealTarget = b;
+					}
+				}
+			});
+
+			if (autoStealTarget) {
+				ThiefSystem.start([autoStealTarget], Player.currentFloorIndex, Player.x, false, true);
+			} else if (!GameInfo.isTransitioning) {
+				Player.update();
+			} else {
+				GameInfo.cameraOffsetY += GameInfo.transitionSpeed;
+				if (GameInfo.cameraOffsetY >= Renderer.gameHeight) {
+					GameInfo.isTransitioning = false; GameInfo.cameraOffsetY = 0;
+					GameInfo.currentStage++; GameInfo.droppedBoxes = []; Player.resetForNewStage(); 
+				}
+			}
+		}
+		
+		Renderer.clear(); Renderer.ctx.save();
+		Renderer.ctx.beginPath(); Renderer.ctx.rect(0, 0, Renderer.width, Renderer.gameHeight); Renderer.ctx.clip(); 
+		
+		if (!GameInfo.isTransitioning) {
+			Renderer.drawStageBlock(GameInfo.currentStage, 0); Renderer.drawDroppedBoxes(0); 
+			SmallEnemyManager.render(Renderer.ctx, 0); ThiefSystem.render(Renderer.ctx); 
+			
+			if (IntroSystem.active) {
+				Renderer.ctx.save(); Renderer.ctx.globalAlpha = 1.0 - Math.max(0, IntroSystem.opacity);
+				Player.render(); Renderer.ctx.restore(); IntroSystem.render(Renderer.ctx);
+			} else { Player.render(); }
+			ParticleSystem.render(Renderer.ctx); 
+			
+			if (GameInfo.flashTimer > 0) {
+				Renderer.ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'; Renderer.ctx.fillRect(0, 0, Renderer.width, Renderer.gameHeight);
+				GameInfo.flashTimer--;
+			}
+		} else {
+			Renderer.drawStageBlock(GameInfo.currentStage, GameInfo.cameraOffsetY);
+			Renderer.drawStageBlock(GameInfo.currentStage + 1, GameInfo.cameraOffsetY - Renderer.gameHeight);
+		}
+		
+		Renderer.ctx.restore(); Renderer.drawUI(); 
+		requestAnimationFrame(() => Engine.loop());
+	}
+};
+
+Engine.start();
+</script>
+</body>
+</html>
