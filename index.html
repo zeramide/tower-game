@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-	<title>Delivery Tower - Sweat & Fair Spawn Update</title>
+	<title>Delivery Tower - Cute Chibi Update</title>
 	<style>
 		body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Courier New', monospace; }
 		canvas { background: #1a1a1a; box-shadow: 0 0 30px rgba(255,255,255,0.1); image-rendering: pixelated; touch-action: none; }
@@ -14,14 +14,14 @@
 
 <script>
 /**
- * [베테랑 파트너의 밸런스 및 연출 수정 노트]
- * 1. 고양이 충돌 시 기존 스택 모션 유지 + 2초 조작 불가(Stun) 복구
- * 2. 0층 스폰 시 플레이어 시작 지점 반경 80px 내 스폰 완전 차단 (부조리 억제)
- * 3. 기사님 상시 땀방울 애니메이션 추가
+ * [베테랑 파트너의 그래픽 업그레이드 노트]
+ * 1. 로직 안정화 완료: 킥보드/도사견 재등장 로직은 그대로 유지.
+ * 2. 2등신 귀요미 화: 중형 적(유치원생, 킥보드, 도사견)의 비율을 머리5:몸통5의 chibi 스타일로 변경.
+ * 3. 픽셀 데이터 교체: 한정된 16x16 안에서 머리 볼륨을 극대화하여 동글동글한 느낌을 구현.
  */
 
 // ==========================================
-// 1. Assets (데이터 모듈)
+// 1. Assets (데이터 모듈 - 도트 그래픽 데이터)
 // ==========================================
 const PALETTE = { 
 	0: null, 1: '#000000', 2: '#2C3E50', 3: '#95A5A6', 4: '#34495E', 
@@ -36,6 +36,7 @@ const ELEV_DATA = [[2,2,2,2,2,2,2,2],[2,C,C,2,2,C,C,2],[2,3,3,1,1,3,3,2],[2,3,3,
 const ENTRANCE_DATA = [[2,2,2,2,2,2,2,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,A,2,2,A,9,2],[2,9,A,2,2,A,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,2,2,2,2,2,2,2]];
 const GREEN_DOOR_DATA = [[V,V,V,V,V,V,V,V,V,V,V,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,1,1,U,V],[V,U,U,U,U,U,U,U,1,1,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V]];
 const YELLOW_DOOR_DATA = [[4,4,4,4,4,4,4,4,4,4,4,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,1,1,6,4],[4,6,6,6,6,6,6,6,1,1,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4],[4,6,6,6,6,6,6,6,6,6,6,4]];
+const DOOR_OPEN_DATA = [[4,4,4,4,4,4,4,4,4,4,4,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4],[4,1,1,1,1,1,1,1,1,1,1,4]];
 const BEAM_DATA = [[4,4,4,4], [A,A,A,A], [5,5,5,5], [1,1,1,1]]; 
 const CAMERA_DATA = [[0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0],[0,0,1,1,5,5,5,5,5,1,1,0,0,0,0,0],[0,1,5,5,5,5,5,5,5,5,5,1,0,0,0,0],[1,5,5,1,1,1,1,1,1,1,5,5,1,0,0,0],[1,5,1,9,9,9,9,9,9,9,1,5,1,0,0,0],[1,5,1,9,1,9,9,9,1,9,1,5,1,0,0,0],[1,5,1,9,1,A,A,A,1,9,1,5,1,0,0,0],[1,5,1,9,1,9,9,9,1,9,1,5,1,0,0,0],[1,5,1,9,9,1,1,1,9,9,1,5,1,0,0,0],[1,5,5,1,1,1,1,1,1,1,5,5,1,0,0,0],[1,5,5,5,5,5,5,5,5,5,5,5,1,0,0,0],[0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0]];
 const BOX_DATA = [[B,B,B,B,B,B,B,B],[B,T,T,T,T,T,T,B],[B,T,B,B,B,B,T,B],[B,T,T,T,T,T,T,B],[B,B,B,B,B,B,B,B],[B,B,B,B,B,B,B,B],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]];
@@ -51,23 +52,57 @@ const BILL_1000  = [[9,9,9,9,9,9,9,9,9,9], [9,A,A,A,A,A,A,A,A,9], [9,A,9,9,A,A,9
 const BILL_10000 = [[H,H,H,H,H,H,H,H,H,H], [H,A,A,A,A,A,A,A,A,H], [H,A,H,H,A,A,H,H,A,H], [H,A,H,H,A,A,H,H,A,H], [H,A,A,A,A,A,A,A,A,H], [H,H,H,H,H,H,H,H,H,H]]; 
 const BILL_50000 = [[6,6,6,6,6,6,6,6,6,6], [6,A,A,A,A,A,A,A,A,6], [6,A,6,6,A,A,6,6,A,6], [6,A,6,6,A,A,6,6,A,6], [6,A,A,A,A,A,A,A,A,6], [6,6,6,6,6,6,6,6,6,6]]; 
 const TRUCK_DATA = [[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0,0,0,0,0,0], [0,0,0,F,A,A,A,A,A,A,A,A,A,A,A,A,F,0,0,0,0,0,0,0], [0,0,0,F,A,F,F,F,F,F,F,F,F,F,F,A,F,0,0,0,0,0,0,0], [0,0,0,F,A,F,F,F,F,F,F,F,F,F,F,A,F,0,0,0,0,0,0,0], [0,0,0,F,A,F,F,F,F,F,F,F,F,F,F,A,F,9,9,9,0,0,0,0], [0,0,0,F,A,A,A,A,A,A,A,A,A,A,A,A,F,9,A,A,9,0,0,0], [0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,9,A,A,9,0,0,0], [0,0,0,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,0,0], [0,0,0,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,0,0], [0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0], [0,0,0,1,1,F,1,1,0,0,0,0,0,0,0,1,1,F,1,1,0,0,0,0], [0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0]];
+const AMBULANCE = [[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0,0,0,0,0,0],[0,0,0,F,E,E,F,F,F,F,F,F,F,F,C,C,F,0,0,0,0,0,0,0],[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0,0,0],[0,0,0,F,F,F,F,F,F,C,C,F,F,F,F,F,F,F,A,A,F,0,0,0],[0,0,0,F,F,F,F,F,C,C,C,C,F,F,F,F,F,F,A,A,F,0,0,0],[0,0,0,F,F,F,F,F,F,C,C,F,F,F,F,F,F,F,F,F,F,F,0,0],[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0],[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0],[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0],[0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0],[0,0,0,1,1,5,1,1,0,0,0,0,0,0,0,1,1,5,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0]];
 
-const ENEMY_VASE = [[0,0,0,0,0,0,0,0],[0,0,0,7,8,0,0,0],[0,0,8,7,8,0,0,0],[0,0,8,7,8,7,0,0],[0,8,7,8,7,8,0,0],[0,7,8,0,8,7,8,0],[0,8,0,0,7,8,8,0],[0,8,8,0,8,8,0,0]];
 const ENEMY_BANANA = [[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,1,0],[0,0,0,0,0,6,0,0],[0,0,6,6,6,0,0,0],[0,6,6,6,6,6,0,0],[0,6,0,0,0,6,6,0],[0,0,0,0,0,0,0,0]];
 const ENEMY_BASEBALL = [[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,A,A,0,0,0],[0,0,A,C,C,A,0,0],[0,A,C,A,A,C,A,0],[0,A,C,A,A,C,A,0],[0,0,A,C,C,A,0,0],[0,0,0,A,A,0,0,0]];
 const ENEMY_PIGEON1 = [[0,0,0,0,0,0,0,0],[0,0,0,5,5,0,0,0],[0,0,C,5,1,5,0,0],[0,0,0,5,5,5,5,0],[0,0,5,A,5,A,5,0],[0,0,5,5,5,5,5,0],[0,0,0,5,5,5,0,0],[0,0,0,6,0,6,0,0]];
 const ENEMY_PIGEON2 = [[0,0,0,0,0,0,0,0],[0,0,0,5,5,0,0,0],[0,0,C,5,1,5,0,0],[0,0,0,5,5,5,5,0],[0,0,5,A,5,A,5,0],[0,0,0,5,5,5,0,0],[0,0,0,5,5,5,0,0],[0,0,0,0,6,0,0,0]];
 const ENEMY_CAT = [[0,0,0,0,0,0,0,0],[0,F,0,0,0,F,0,0],[0,F,F,1,F,F,0,0],[0,F,1,F,F,F,F,0],[0,F,F,F,F,F,1,0],[0,F,1,F,F,1,F,0],[0,F,F,F,F,F,F,0],[0,0,F,0,F,0,F,0]];
 const ENEMY_TRASHBAG = [[0,0,0,0,1,0,0,0],[0,0,0,1,1,1,0,0],[0,0,1,1,3,1,0,0],[0,1,1,1,1,1,1,0],[0,1,3,1,1,1,1,0],[1,1,1,1,1,3,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0]];
+const ENEMY_VASE1 = [[0,C,C,0,0,0,0,0],[0,0,U,0,0,0,0,0],[0,0,0,7,8,0,0,0],[0,0,8,7,8,7,0,0],[0,8,7,8,7,8,0,0],[0,7,8,0,8,7,8,0],[0,8,0,0,7,8,8,0],[0,8,8,0,8,8,0,0]];
+const ENEMY_VASE2 = [[0,0,0,C,C,0,0,0],[0,0,0,U,0,0,0,0],[0,0,0,7,8,0,0,0],[0,0,8,7,8,7,0,0],[0,8,7,8,7,8,0,0],[0,7,8,0,8,7,8,0],[0,8,0,0,7,8,8,0],[0,8,8,0,8,8,0,0]];
+
+// ★ 신규 중형 적 에셋 (2등신 큐트 Chibi 스타일)
+const MED_KID_1 = [
+	[0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,0,1,6,6,6,6,6,1,0,0,0,0],[0,0,0,0,1,6,6,6,6,6,6,6,1,0,0,0],[0,0,0,0,1,6,1,D,D,D,1,6,1,0,0,0],
+	[0,0,0,0,1,D,D,D,D,D,D,D,1,0,0,0],[0,0,0,0,1,D,1,D,D,D,1,D,1,0,0,0],[0,0,0,0,1,D,D,D,F,D,D,D,1,0,0,0],[0,0,0,0,0,1,D,D,D,D,D,1,0,0,0,0],
+	[0,0,0,0,0,1,1,D,1,D,1,1,0,0,0,0],[0,0,0,0,0,0,1,9,9,9,1,0,0,0,0,0],[0,0,0,0,0,1,9,9,9,9,9,1,0,0,0,0],[0,0,0,0,0,1,9,9,9,9,9,1,0,0,0,0],
+	[0,0,0,0,0,1,9,9,9,9,9,1,0,0,0,0],[0,0,0,0,0,0,1,D,0,D,1,0,0,0,0,0],[0,0,0,0,0,0,1,D,0,D,1,0,0,0,0,0],[0,0,0,0,0,1,1,0,1,1,0,0,0,0,0,0]
+];
+const MED_KID_2 = [
+	[0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,0,1,6,6,6,6,6,1,0,0,0,0],[0,0,0,0,1,6,6,6,6,6,6,6,1,0,0,0],[0,0,0,0,1,6,1,D,D,D,1,6,1,0,0,0],
+	[0,0,0,0,1,D,D,D,D,D,D,D,1,0,0,0],[0,0,0,0,1,D,1,D,D,D,1,D,1,0,0,0],[0,0,0,0,1,D,D,D,F,D,D,D,1,0,0,0],[0,0,0,0,0,1,D,D,D,D,D,1,0,0,0,0],
+	[0,0,0,0,0,1,1,D,1,D,1,1,0,0,0,0],[0,0,0,0,0,0,1,9,9,9,1,0,0,0,0,0],[0,0,0,0,0,1,9,9,9,9,9,1,0,0,0,0],[0,0,0,0,0,1,9,9,9,9,9,1,0,0,0,0],
+	[0,0,0,0,0,1,9,9,9,9,9,1,0,0,0,0],[0,0,0,0,0,0,1,D,0,D,1,0,0,0,0,0],[0,0,0,0,0,0,1,1,0,1,D,1,0,0,0,0],[0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0]
+];
+const MED_KICKBOARD = [
+	[0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],[0,0,0,0,1,6,6,6,6,6,1,0,0,0,0,0],[0,0,0,1,6,6,6,6,6,6,6,1,0,0,0,0],[0,0,0,1,6,1,A,A,A,1,6,1,0,0,0,0],
+	[0,0,0,1,D,D,D,D,D,D,D,1,0,0,0,0],[0,0,0,1,D,1,D,D,D,1,D,1,0,0,0,0],[0,0,0,1,D,D,D,D,D,D,D,1,0,0,0,0],[0,0,0,0,1,D,D,1,1,D,D,1,0,0,0,0],
+	[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,1,9,9,9,9,1,0,1,0,0,0,0],[0,0,0,1,9,9,9,9,9,9,1,0,1,0,0,0],[0,0,0,1,9,9,9,9,9,9,1,1,1,0,0,0],
+	[0,0,0,0,1,1,1,1,1,1,1,0,1,0,0,0],[0,0,0,0,0,1,D,1,D,1,0,0,0,0,0,0],[0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0],[0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0]
+];
+const MED_TOSA_1 = [
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],[0,0,0,0,1,B,B,B,B,B,1,0,0,0,0,0],[0,0,0,1,B,8,8,B,8,8,B,1,0,0,0,0],
+	[0,0,0,1,8,8,8,8,8,8,8,1,0,0,0,0],[0,0,1,8,1,8,1,8,1,8,1,8,1,0,0,0],[0,0,1,8,8,8,8,8,8,8,8,1,0,0,0,0],[0,0,1,B,8,B,8,8,B,8,B,1,0,0,0,0],
+	[0,0,0,1,B,B,B,B,B,B,B,1,0,0,0,0],[0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,1,8,8,8,8,8,1,0,0,0,0,0],[0,0,0,0,1,8,8,8,8,8,1,0,0,0,0,0],
+	[0,0,0,0,1,8,8,8,8,8,1,0,0,0,0,0],[0,0,0,0,0,1,B,0,B,1,0,0,0,0,0,0],[0,0,0,0,0,1,B,0,B,1,0,0,0,0,0,0],[0,0,0,0,0,1,1,0,1,1,0,0,0,0,0,0]
+];
+const MED_TOSA_2 = [
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],[0,0,0,0,1,B,B,B,B,B,1,0,0,0,0,0],[0,0,0,1,B,8,8,B,8,8,B,1,0,0,0,0],
+	[0,0,0,1,8,8,8,8,8,8,8,1,0,0,0,0],[0,0,1,8,1,8,1,8,1,8,1,8,1,0,0,0],[0,0,1,8,8,8,8,8,8,8,8,1,0,0,0,0],[0,0,1,B,8,B,8,8,B,8,B,1,0,0,0,0],
+	[0,0,0,1,B,B,B,B,B,B,B,1,0,0,0,0],[0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,1,8,8,8,8,8,1,0,0,0,0,0],[0,0,0,0,1,8,8,8,8,8,1,0,0,0,0,0],
+	[0,0,0,0,1,8,8,8,8,8,1,0,0,0,0,0],[0,0,0,0,0,1,B,0,B,1,0,0,0,0,0,0],[0,0,0,0,0,1,1,0,1,B,1,0,0,0,0,0],[0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0]
+];
+
+const MED_BLACKCAT_1 = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0],[0,0,0,0,1,1,0,1,1,0,0,0,0,0,0,0],[0,0,0,0,1,F,1,F,1,0,0,0,0,0,0,0],[0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0],[0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0],[0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]];
+const MED_BLACKCAT_2 = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0],[0,0,0,0,1,1,0,1,1,0,0,0,0,0,0,0],[0,0,0,0,1,F,1,F,1,0,0,0,0,0,0,0],[0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0],[0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0],[0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,1,1,0,0,0,1,1,1,1,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]];
 
 const BOSS_IDLE_1 = [[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,1,D,D,D,D,D,D,1,0,0,0,0],[0,0,0,0,1,D,1,D,D,1,D,1,0,0,0,0],[0,0,0,0,1,D,D,D,D,D,D,1,0,0,0,0],[0,0,0,0,0,1,D,1,1,D,1,0,0,0,0,0],[0,0,0,0,2,2,2,2,2,2,2,2,0,0,0,0],[0,0,0,2,F,2,2,C,C,2,2,F,2,0,0,0],[0,0,2,2,F,2,2,C,C,2,2,F,2,2,0,0],[0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],[0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0],[0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0]];
 const BOSS_IDLE_2 = [[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,1,D,D,D,D,D,D,1,0,0,0,0],[0,0,0,0,1,D,1,D,D,1,D,1,0,0,0,0],[0,0,0,0,1,D,D,D,D,D,D,1,0,0,0,0],[0,0,0,0,0,1,D,1,D,D,1,0,0,0,0,0],[0,0,0,0,2,2,2,2,2,2,2,2,0,0,0,0],[0,0,0,2,F,2,2,C,C,2,2,F,2,0,0,0],[0,0,2,2,F,2,2,C,C,2,2,F,2,2,0,0],[0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],[0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0],[0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0]];
 const DRIVER_BOW_1 = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,0,1,1,E,E,1,1,0,0,0,0,0],[0,0,0,0,0,1,E,E,E,E,1,0,0,0,0,0],[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,E,E,E,E,E,E,E,E,0,0,0,0],[0,0,0,E,E,E,E,E,E,E,E,E,E,0,0,0],[0,0,0,E,E,E,E,E,E,E,E,E,E,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,G,G,G,0,0,0,0,G,G,G,0,0,0],[0,0,0,G,G,G,0,0,0,0,G,G,G,0,0,0]];
 const DRIVER_BOW_2 = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,0,1,1,E,E,1,1,0,0,0,0,0],[0,0,0,0,0,1,E,E,E,E,1,0,0,0,0,0],[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,E,E,E,E,E,E,E,E,0,0,0,0],[0,0,0,E,E,E,E,E,E,E,E,E,E,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,G,G,G,0,0,0,0,G,G,G,0,0,0],[0,0,0,G,G,G,0,0,0,0,G,G,G,0,0,0]];
-const AMBULANCE = [[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0,0,0,0,0,0],[0,0,0,F,E,E,F,F,F,F,F,F,F,F,C,C,F,0,0,0,0,0,0,0],[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0,0,0],[0,0,0,F,F,F,F,F,F,C,C,F,F,F,F,F,F,F,A,A,F,0,0,0],[0,0,0,F,F,F,F,F,C,C,C,C,F,F,F,F,F,F,A,A,F,0,0,0],[0,0,0,F,F,F,F,F,F,C,C,F,F,F,F,F,F,F,F,F,F,F,0,0],[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0],[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0],[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0],[0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0],[0,0,0,1,1,5,1,1,0,0,0,0,0,0,0,1,1,5,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0]];
-
-// ★ 신규 상시 땀방울 애니메이션 에셋
-const EFFECT_SWEAT = [[0,9,0],[9,A,9],[9,9,9],[0,9,0]];
+const EFFECT_SWEAT = [[0,9,0],[9,A,9],[9,9,9],[0,9,0]]; 
 
 // ==========================================
 // 2. Engine & Map Logic
@@ -76,7 +111,7 @@ const MapGenerator = {
 	cache: {}, 
 	getStageData(stageNum) {
 		if (!this.cache[stageNum]) {
-			const packageCount = Math.floor(Math.random() * 5) + 2;
+			const packageCount = Math.floor(Math.random() * 5) + 2; 
 			let doorPool = [];
 			for (let i = 0; i < 12; i++) doorPool.push(i < packageCount ? 1 : 0); 
 			for (let i = doorPool.length - 1; i > 0; i--) {
@@ -92,48 +127,41 @@ const MapGenerator = {
 };
 
 const GameInfo = {
-	currentStage: 1, isTransitioning: false, cameraOffsetY: 0, transitionSpeed: 15, droppedBoxes: [],
+	currentStage: 1, isTransitioning: false, cameraOffsetY: 0, transitionSpeed: 15, 
+	droppedBoxes: [], 
 	score: 0, life: 5, isGameOver: false, gameOverReason: 'fired', timeFreeze: 0, flashTimer: 0,
 	gameOverTime: 0
 };
 
+// 소형 적 매니저
 const SmallEnemyManager = {
 	enemies: [],
 	initForStage(stage) {
 		this.enemies = [];
 		let count = stage < 3 ? 1 : 2; 
 		const types = ['vase', 'banana', 'baseball', 'trashbag', 'pigeon', 'cat'];
-		
 		let availableFloors = [0, 1, 2].sort(() => Math.random() - 0.5);
 
 		for(let i = 0; i < count; i++) {
 			if (availableFloors.length === 0) break;
 			let type = types[Math.floor(Math.random() * types.length)];
-			
 			let validFloor = -1;
 			let validDoorIdx = -1;
 			
 			for (let f of availableFloors) {
 				const stageData = MapGenerator.getStageData(GameInfo.currentStage);
 				let possibleDoors = [];
-				
-				// ★ 부조리(시작 지점 즉사) 방지 로직: 플레이어 시작 x 좌표
 				let playerStartX = Renderer.width - Renderer.elevWidth - 48 - 20; 
 
 				stageData.floors[f].doors.forEach((doorState, idx) => {
 					let doorStartX = Renderer.elevWidth + 16 + (idx * (Renderer.doorWidth + 16));
-					
-					// 녹색문(0)에 스폰하되, 0층일 경우 플레이어의 시작 좌표와 너무 가까우면 배제 (반경 80px)
 					if (doorState === 0) {
 						if (f === 0 && Math.abs(doorStartX - playerStartX) < 80) return; 
 						possibleDoors.push(idx); 
 					}
 				});
-				
 				if (possibleDoors.length > 0) {
-					validFloor = f;
-					validDoorIdx = possibleDoors[Math.floor(Math.random() * possibleDoors.length)];
-					break;
+					validFloor = f; validDoorIdx = possibleDoors[Math.floor(Math.random() * possibleDoors.length)]; break;
 				}
 			}
 
@@ -146,29 +174,37 @@ const SmallEnemyManager = {
 				this.enemies.push({
 					type: type, floor: validFloor, x: spawnX, y: 0, width: 24, height: 24, 
 					startX: spawnX, endX: boundaryEndX, 
-					vx: type === 'pigeon' ? 0.6 : 0, dir: 1, opacity: 0 
+					vx: type === 'pigeon' ? 0.6 : 0, dir: 1, opacity: 0, isFading: false 
 				});
 			}
 		}
 	},
-
+	spawnDynamic(type, floor, x) {
+		this.enemies.push({
+			type: type, floor: floor, x: x, y: 0, width: 24, height: 24, 
+			startX: x, endX: 0, vx: 0, dir: 1, opacity: 0, isFading: false 
+		});
+	},
 	update() {
 		this.enemies.forEach(e => {
 			let floorY = Renderer.gameHeight - (e.floor * Renderer.floorHeight) - 16;
 			e.y = floorY - e.height; 
-			if (e.opacity < 1) e.opacity += 0.05; 
+			if (e.isFading) e.opacity -= 0.1;
+			else if (e.opacity < 1) e.opacity += 0.05; 
 
-			if (e.type === 'pigeon') {
+			if (e.type === 'pigeon' && !e.isFading) {
 				e.x += e.vx * e.dir;
 				if (e.x >= e.endX) { e.x = e.endX; e.dir = -1; } 
 				else if (e.x <= e.startX) { e.x = e.startX; e.dir = 1; }
 			}
 		});
+		this.enemies = this.enemies.filter(e => !(e.isFading && e.opacity <= 0));
 	},
 	render(ctx, yOffset) {
 		this.enemies.forEach(e => {
 			let img = Renderer.assets['enemy_' + e.type];
 			if (e.type === 'pigeon') img = Renderer.assets[Math.floor(Date.now() / 200) % 2 === 0 ? 'enemy_pigeon1' : 'enemy_pigeon2'];
+			if (e.type === 'vase') img = Renderer.assets[Math.floor(Date.now() / 400) % 2 === 0 ? 'enemy_vase1' : 'enemy_vase2'];
 			let catIdleY = (e.type === 'cat' && Math.floor(Date.now() / 400) % 2 === 0) ? Math.floor(Renderer.scale / 2) : 0;
 
 			ctx.save();
@@ -176,9 +212,185 @@ const SmallEnemyManager = {
 			if (e.type === 'pigeon' && e.dir === -1) {
 				ctx.translate(e.x + e.width, e.y + yOffset);
 				ctx.scale(-1, 1);
-				ctx.drawImage(img, 0, 0);
+				ctx.drawImage(img, 0, 0); 
 			} else {
 				ctx.drawImage(img, e.x, e.y + yOffset + catIdleY);
+			}
+			ctx.restore();
+		});
+	}
+};
+
+const MediumEnemyManager = {
+	enemies: [],
+	initForStage(stage) {
+		this.enemies = [];
+		if (stage < 2) return; 
+		
+		let count = 1; 
+		const types = ['kid', 'tosa', 'kickboard', 'blackcat'];
+		
+		for(let i=0; i<count; i++) {
+			let type = types[Math.floor(Math.random() * types.length)];
+			let floor = Math.floor(Math.random() * 3);
+			
+			let e = {
+				type: type, floor: floor, width: 48, height: 48, 
+				opacity: 0, isFading: false, state: 'normal'
+			};
+
+			if (type === 'kid') {
+				e.x = Renderer.elevWidth + 20; e.dir = 1; e.vx = Player.speed * 0.5; e.dropCount = 0; e.waitTimer = 0; e.targetFloor = floor;
+			} else if (type === 'tosa') {
+				e.doorX1 = Renderer.elevWidth + 16 + (0 * (Renderer.doorWidth + 16));
+				e.doorX2 = Renderer.elevWidth + 16 + (3 * (Renderer.doorWidth + 16));
+				e.x = e.doorX1;
+				e.dir = 1; e.vx = Player.speed; e.waitTimer = 60; e.state = 'spawning';
+			} else if (type === 'kickboard') {
+				e.floor = 2; // 3층에서 시작
+				e.floorDir = -1; 
+				e.x = Renderer.elevWidth; e.dir = 1; e.vx = Player.speed * 1.5; e.state = 'running';
+			} else if (type === 'blackcat') {
+				let doorIdx = Math.floor(Math.random() * 4);
+				e.x = Renderer.elevWidth + 16 + (doorIdx * (Renderer.doorWidth + 16)) + 10;
+				e.vx = 0; e.vy = 0; e.state = 'idle';
+			}
+			
+			this.enemies.push(e);
+		}
+	},
+
+	update() {
+		this.enemies.forEach(e => {
+			let floorY = Renderer.gameHeight - (e.floor * Renderer.floorHeight) - 16;
+			e.y = floorY - e.height;
+
+			if (e.isFading) {
+				e.opacity -= 0.1;
+				return; 
+			} else if (e.opacity < 1 && e.type !== 'kickboard' && e.type !== 'tosa') {
+				e.opacity += 0.05; 
+			}
+
+			if (e.type === 'kid') {
+				if (e.state === 'elevator') {
+					e.waitTimer--;
+					if (e.waitTimer <= 0) {
+						e.floor = e.targetFloor; e.state = 'normal'; e.dir *= -1; e.x += (e.dir * 10);
+					}
+				} else {
+					e.x += e.vx * e.dir;
+					if (e.dropCount < 2 && Math.random() < 0.005) {
+						e.dropCount++;
+						SmallEnemyManager.spawnDynamic('baseball', e.floor, e.x);
+					}
+					if (e.x <= Renderer.elevWidth || e.x >= Renderer.width - Renderer.elevWidth - e.width) {
+						e.state = 'elevator'; e.waitTimer = 60; 
+						e.targetFloor = (e.floor + (Math.random() < 0.5 ? 1 : 2)) % 3; 
+					}
+				}
+			} 
+			else if (e.type === 'tosa') {
+				if (e.state === 'spawning') {
+					e.waitTimer--;
+					e.opacity += (1 / 60); 
+					if (e.waitTimer <= 0) { e.state = 'walking'; e.opacity = 1; }
+				} else if (e.state === 'entering') {
+					e.waitTimer--;
+					e.opacity -= (1 / 60); 
+					if (e.waitTimer <= 0) { 
+						e.state = 'waiting'; 
+						e.waitTimer = 180; 
+						e.opacity = 0; 
+					} 
+				} else if (e.state === 'waiting') {
+					e.waitTimer--;
+					if (e.waitTimer <= 0) {
+						e.state = 'spawning'; 
+						e.waitTimer = 60; 
+						e.dir *= -1; 
+						e.x = e.dir === 1 ? e.doorX1 : e.doorX2; 
+					}
+				} else if (e.state === 'walking') {
+					e.x += e.vx * e.dir;
+					if (Math.random() < 0.1) ParticleSystem.spawn(e.x + e.width/2, floorY, 1, false);
+					
+					let targetX = e.dir === 1 ? e.doorX2 : e.doorX1;
+					if ((e.dir === 1 && e.x >= targetX) || (e.dir === -1 && e.x <= targetX)) {
+						e.state = 'entering'; e.waitTimer = 60; e.x = targetX;
+					}
+				}
+			}
+			else if (e.type === 'kickboard') {
+				if (e.state === 'waiting') {
+					e.waitTimer--;
+					if (e.waitTimer <= 0) {
+						e.floor += e.floorDir;
+						if (e.floor <= 0) { e.floor = 0; e.floorDir = 1; } 
+						else if (e.floor >= 2) { e.floor = 2; e.floorDir = -1; }
+						
+						e.state = 'running'; 
+						e.dir *= -1; 
+						e.x = e.dir === 1 ? Renderer.elevWidth : Renderer.width - Renderer.elevWidth - e.width;
+						e.opacity = 0;
+					}
+				} else {
+					e.x += e.vx * e.dir;
+					let distFromEdge = Math.min(e.x - Renderer.elevWidth, Renderer.width - Renderer.elevWidth - e.width - e.x);
+					if (distFromEdge < 100) e.opacity = Math.max(0, distFromEdge / 100);
+					else e.opacity = 1;
+					
+					if (e.x <= Renderer.elevWidth || e.x >= Renderer.width - Renderer.elevWidth - e.width) {
+						e.state = 'waiting'; 
+						e.waitTimer = 180; 
+					}
+				}
+			}
+			else if (e.type === 'blackcat') {
+				if (e.state === 'idle') {
+					if (Player.currentFloorIndex === e.floor && Math.abs(Player.x - e.x) < 120) {
+						e.state = 'jumping'; 
+						e.dir = Player.x < e.x ? -1 : 1;
+						e.vx = Player.speed * e.dir * 1.5; 
+						e.vy = -10; 
+					}
+				} else if (e.state === 'jumping') {
+					e.vy += Player.gravity * 0.5; 
+					e.x += e.vx; e.y += e.vy;
+					if (e.y >= floorY - e.height) { e.isFading = true; }
+					if (Player.isDodging && Math.abs(Player.x - e.x) < 30) { e.isFading = true; }
+				}
+			}
+		});
+		this.enemies = this.enemies.filter(e => !(e.isFading && e.opacity <= 0));
+	},
+
+	render(ctx, yOffset) {
+		this.enemies.forEach(e => {
+			if (e.state === 'elevator' || e.state === 'waiting') return; 
+			
+			if (e.type === 'tosa' && (e.state === 'spawning' || e.state === 'entering')) {
+				ctx.drawImage(Renderer.assets['door_open'], e.x + 10, e.y + yOffset);
+			}
+
+			let img;
+			let animTick = Math.floor(Date.now() / 200) % 2 === 0;
+			if (e.type === 'kid') img = Renderer.assets[animTick ? 'med_kid_1' : 'med_kid_2'];
+			else if (e.type === 'tosa') img = Renderer.assets[animTick ? 'med_tosa_1' : 'med_tosa_2'];
+			else if (e.type === 'kickboard') img = Renderer.assets['med_kickboard'];
+			else if (e.type === 'blackcat') img = Renderer.assets[e.state === 'idle' ? 'med_blackcat_1' : 'med_blackcat_2'];
+
+			ctx.save();
+			ctx.globalAlpha = Math.max(0, Math.min(1, e.opacity)); 
+			
+			let drawX = e.x; let drawY = e.y + yOffset;
+			
+			if (e.dir === -1 && e.type !== 'kid') { 
+				ctx.translate(drawX + e.width, drawY);
+				ctx.scale(-1, 1);
+				ctx.drawImage(img, 0, 0); 
+			} else {
+				ctx.drawImage(img, drawX, drawY);
 			}
 			ctx.restore();
 		});
@@ -188,7 +400,6 @@ const SmallEnemyManager = {
 const ThiefSystem = {
 	active: false, boxesToSteal: [], progress: 0, targetFloor: 0, targetX: 0, 
 	isClearingStage: false, isMidGameAutoSteal: false, isFleeing: false, 
-
 	start(unphotoedBoxes, tFloor, tX, isClearing, isMidGame = false) {
 		this.active = true; this.progress = 0; this.targetFloor = tFloor; this.targetX = tX; 
 		this.isClearingStage = isClearing; this.isMidGameAutoSteal = isMidGame; this.isFleeing = false;
@@ -211,7 +422,6 @@ const ThiefSystem = {
 			return { box: b, doorX: thiefDoorX, originalBoxX: b.x };
 		});
 	},
-
 	update() {
 		if (!this.active) return;
 		if (this.isFleeing) {
@@ -230,9 +440,9 @@ const ThiefSystem = {
 		if (this.progress >= 100) {
 			this.active = false;
 			this.boxesToSteal.forEach(steal => {
-				GameInfo.life -= 0.5; 
+				GameInfo.life -= 1.0; 
 				let idx = GameInfo.droppedBoxes.indexOf(steal.box);
-				if (idx > -1) GameInfo.droppedBoxes.splice(idx, 1);
+				if (idx > -1) GameInfo.droppedBoxes.splice(idx, 1); 
 			});
 			
 			if (GameInfo.life <= 0) { 
@@ -246,7 +456,6 @@ const ThiefSystem = {
 			}
 		}
 	},
-
 	render(ctx) {
 		if (!this.active) return;
 		ctx.fillStyle = '#FFCCAA'; 
@@ -313,7 +522,7 @@ const ParticleSystem = {
 };
 
 // ==========================================
-// 3. Renderer (UI 및 배경)
+// 3. Renderer
 // ==========================================
 const Renderer = {
 	ctx: null, width: 400, height: 700, gameHeight: 600, uiHeight: 100, scale: 5, 
@@ -346,7 +555,8 @@ const Renderer = {
 	drawStageBlock(stageNum, yOffset) {
 		this.ctx.fillStyle = '#1A1A24'; this.ctx.fillRect(0, yOffset, this.width, this.gameHeight);
 		const stageData = MapGenerator.getStageData(stageNum);
-		const baseFloor = (stageNum - 1) * 3 + 1;
+		const baseFloor = (stageNum - 1) * 3 + 1; 
+		
 		for (let i = 0; i < 3; i++) {
 			const floorTopY = yOffset + this.gameHeight - ((i + 1) * this.floorHeight);
 			const floorBottomY = floorTopY + this.floorHeight;
@@ -361,6 +571,16 @@ const Renderer = {
 			stageData.floors[i].doors.forEach((doorState, index) => {
 				const doorX = this.elevWidth + gap + (index * (this.doorWidth + gap));
 				this.ctx.drawImage(doorState === 1 ? this.assets['yellowDoor'] : this.assets['greenDoor'], doorX, baseY);
+				
+				const currentActualFloor = baseFloor + i;
+				const roomNumber = `${currentActualFloor}0${4 - index}`; 
+				
+				this.ctx.save();
+				this.ctx.fillStyle = '#7F8C8D'; 
+				this.ctx.font = 'bold 12px "Courier New", monospace';
+				this.ctx.textAlign = 'center';
+				this.ctx.fillText(roomNumber, doorX + (this.doorWidth / 2), baseY - 5);
+				this.ctx.restore();
 			});
 		}
 	},
@@ -381,7 +601,7 @@ const Renderer = {
 		
 		this.ctx.textAlign = 'left'; this.ctx.font = '11px "Malgun Gothic", sans-serif'; this.ctx.fillStyle = '#BDC3C7';
 		this.ctx.fillText("⬅️➡️ 스와이프: 걷기", 15, this.gameHeight + 30);
-		this.ctx.fillText("⬆️ 스와이프: 상체 기울이기", 15, this.gameHeight + 50);
+		this.ctx.fillText("⬆️ 스와이프: 무적 회피 유지", 15, this.gameHeight + 50); 
 		this.ctx.fillText("⬇️ 스와이프: 택배 놓기", 15, this.gameHeight + 70);
 		this.ctx.fillText("더블 탭: 점프", 15, this.gameHeight + 90);
 
@@ -463,7 +683,7 @@ const Renderer = {
 };
 
 // ==========================================
-// 4. Player & Input (물리 및 조작 로직)
+// 4. Player & Input
 // ==========================================
 const Player = {
 	x: 0, y: 0, width: 48, height: 72, 
@@ -487,9 +707,11 @@ const Player = {
 		this.isSlipping = false; this.slipTimer = 0;
 		this.catTimer = 0; 
 		this.invincibleTimer = 0;
-		this.isStunned = false; // 스턴 초기화
+		this.isStunned = false; 
+		this.isDodging = false;
 
 		SmallEnemyManager.initForStage(GameInfo.currentStage);
+		MediumEnemyManager.initForStage(GameInfo.currentStage); 
 	},
 
 	updateGroundY() {
@@ -498,7 +720,8 @@ const Player = {
 	},
 
 	walk(direction) {
-		if (this.isDodging || this.isStunned || this.isSlipping) return; 
+		if (this.isStunned || this.isSlipping) return; 
+		this.isDodging = false; 
 		if (direction === 'right') { this.vx = this.speed; this.facingRight = true; }
 		else if (direction === 'left') { this.vx = -this.speed; this.facingRight = false; }
 		this.savedVx = this.vx; 
@@ -508,20 +731,21 @@ const Player = {
 		this.vx = 0; 
 	},
 	jump() {
-		if (this.isGrounded && !this.isDodging && !this.isStunned && !this.isSlipping) {
+		if (this.isGrounded && !this.isStunned && !this.isSlipping) {
+			this.isDodging = false; 
 			this.vy = this.jumpPower; this.isGrounded = false;
 		}
 	},
 	dodge() {
-		if (this.isGrounded && !this.isDodging && !this.isStunned && !this.isSlipping) {
-			this.isDodging = true; const currentMove = this.vx; this.vx = 0; 
-			clearTimeout(this.dodgeTimer);
-			this.dodgeTimer = setTimeout(() => { this.isDodging = false; this.vx = currentMove; }, 500); 
+		if (this.isGrounded && !this.isStunned && !this.isSlipping) {
+			this.isDodging = true; 
+			this.vx = 0; 
 		}
 	},
 
 	dropPackage() {
-		if (this.isGrounded && !this.isDodging && !this.isStunned && !this.isSlipping && this.packages > 0) {
+		if (this.isGrounded && !this.isStunned && !this.isSlipping && this.packages > 0) {
+			this.isDodging = false; 
 			this.savedVx = this.vx; this.vx = 0; this.isStunned = true; this.packages--; 
 
 			let playerCenterX = this.x + this.width / 2;
@@ -540,14 +764,15 @@ const Player = {
 
 			let snappedBoxX = nearestDoorX + (Renderer.doorWidth / 2) - 12;
 
-			GameInfo.droppedBoxes.push({
-				x: snappedBoxX, y: this.groundY - 24, floor: this.currentFloorIndex, photographed: false, timer: 0
-			});
-			
 			let isSuccess = false;
 			if(currentDoors[nearestIdx] === 1) {
 				isSuccess = true; currentDoors[nearestIdx] = 2; 
 			}
+
+			GameInfo.droppedBoxes.push({
+				x: snappedBoxX, y: this.groundY - 24, floor: this.currentFloorIndex, photographed: false, timer: 0,
+				isCorrect: isSuccess 
+			});
 
 			if (isSuccess) {
 				GameInfo.score += 1000; ParticleSystem.spawn(snappedBoxX + 12, this.y, 10, true); 
@@ -562,8 +787,9 @@ const Player = {
 	},
 
 	teleport(targetFloor, targetX) {
-		if (this.isStunned) return; // 텔레포트 중에도 스턴 방지
-		let unphotoed = GameInfo.droppedBoxes.filter(b => b.floor === this.currentFloorIndex && !b.photographed);
+		if (this.isStunned || this.isSlipping) return; 
+		this.isDodging = false;
+		let unphotoed = GameInfo.droppedBoxes.filter(b => b.floor === this.currentFloorIndex && !b.photographed && b.isCorrect);
 		if (unphotoed.length > 0) {
 			ThiefSystem.start([unphotoed[0]], targetFloor, targetX, false);
 			return; 
@@ -578,7 +804,7 @@ const Player = {
 	},
 
 	clearStage() {
-		let unphotoed = GameInfo.droppedBoxes.filter(b => b.floor === this.currentFloorIndex && !b.photographed);
+		let unphotoed = GameInfo.droppedBoxes.filter(b => b.floor === this.currentFloorIndex && !b.photographed && b.isCorrect);
 		if (unphotoed.length > 0) {
 			ThiefSystem.start([unphotoed[0]], 0, 0, true);
 			return;
@@ -606,28 +832,25 @@ const Player = {
 			if (this.slipTimer <= 0) { this.isSlipping = false; this.vx = this.savedVx; }
 		}
 		
-		// ★ 고양이 탑승 타이머 업데이트 및 속박(Stun) 해제 처리
 		if (this.catTimer > 0) {
 			this.catTimer--;
 			if (this.catTimer <= 0) {
-				this.isStunned = false; // 스턴 해제
-				this.vx = this.savedVx; // 기존 방향 복구
+				this.isStunned = false;
+				this.vx = this.savedVx; 
 			}
 		}
 
-		if (this.invincibleTimer <= 0 && !this.isSlipping) {
+		if (this.invincibleTimer <= 0 && !this.isSlipping && !this.isStunned) {
 			SmallEnemyManager.enemies.forEach((e, index) => {
-				if (e.floor === this.currentFloorIndex) {
+				if (e.floor === this.currentFloorIndex && !e.isFading) {
 					if (this.x < e.x + e.width && this.x + this.width > e.x &&
 						this.y < e.y + e.height && this.y + this.height > e.y) {
 						
 						if (e.type === 'cat') {
-							// ★ 고양이 충돌: 패널티 속박(Stun) 복구
-							this.catTimer = 120; // 2초간 택배 최상단에 머무름
-							this.isStunned = true; // 2초간 모든 조작 불가
-							this.savedVx = this.vx; // 현재 속도 저장
-							this.vx = 0; // 즉시 정지
-							
+							this.catTimer = 120; 
+							this.isStunned = true; 
+							this.savedVx = this.vx; 
+							this.vx = 0; 
 							SmallEnemyManager.enemies.splice(index, 1); 
 							ParticleSystem.spawn(this.x + this.width/2, this.y + this.height/2, 20, true);
 						} else {
@@ -638,10 +861,35 @@ const Player = {
 							this.savedVx = this.vx; this.vx = 0;
 							this.invincibleTimer = 30 + 120; 
 							ParticleSystem.spawn(this.x + this.width/2, this.y + this.height/2, 10, true);
+							e.isFading = true;
 						}
 					}
 				}
 			});
+		}
+
+		if (this.invincibleTimer <= 0 && !this.isDodging && !this.isSlipping) {
+			MediumEnemyManager.enemies.forEach(e => {
+				if (e.state === 'elevator' || e.state === 'waiting') return;
+				
+				if (e.floor === this.currentFloorIndex && !e.isFading) {
+					if (this.x < e.x + e.width && this.x + this.width > e.x &&
+						this.y < e.y + e.height && this.y + this.height > e.y) {
+						
+						GameInfo.life -= 1.0; 
+						if (GameInfo.life <= 0) { GameInfo.gameOverReason = 'hospital'; GameInfo.isGameOver = true; GameInfo.gameOverTime = Date.now(); return; }
+						
+						this.invincibleTimer = 120; 
+						ParticleSystem.spawn(this.x + this.width/2, this.y + this.height/2, 15, true);
+						
+						if (e.type === 'blackcat') e.isFading = true;
+					}
+				}
+			});
+		}
+
+		if (this.isSlipping || this.isStunned) {
+			this.vx = 0;
 		}
 
 		let wasGrounded = this.isGrounded;
@@ -658,7 +906,6 @@ const Player = {
 				this.vx = Math.sign(this.vx) * this.speed;
 				this.savedVx = this.vx;
 			}
-			
 			if (!wasGrounded) ParticleSystem.spawn(this.x + this.width / 2, this.groundY, 15, true);
 		}
 
@@ -708,19 +955,12 @@ const Player = {
 		}
 		Renderer.ctx.restore();
 
-		// ★ [수정] 라이프가 2개 이하일 때만 당황해서 땀을 흘리는 애니메이션 출력
-		// 라이프 수치가 2.0 이하(하트 2개 이하)인 위기 상황에서만 작동합니다.
 		if (GameInfo.life <= 2 && !GameInfo.isGameOver) {
 			let sweatBounce = Math.floor(Date.now() / 200) % 2 === 0 ? 0 : 3;
-			// 기사님 얼굴 근처 위치에 땀방울 렌더링
-			Renderer.ctx.drawImage(
-				Renderer.assets['effect_sweat'], 
-				drawX + this.width - 15, 
-				drawY + 10 + sweatBounce
-			);
+			Renderer.ctx.drawImage(Renderer.assets['effect_sweat'], drawX + this.width - 15, drawY + 10 + sweatBounce);
 		}
-		let handBaseY = this.y + 15 + yOffset;
 
+		let handBaseY = this.y + 15 + yOffset;
 		for (let i = 0; i < this.packages; i++) {
 			Renderer.ctx.drawImage(Renderer.assets['box'], this.x + 12, handBaseY - (i * 18));
 		}
@@ -742,6 +982,7 @@ function restartGame() {
 	GameInfo.timeFreeze = 0; GameInfo.flashTimer = 0;
 	MapGenerator.cache = {}; 
 	SmallEnemyManager.enemies = [];
+	MediumEnemyManager.enemies = []; 
 	ThiefSystem.active = false;
 	ParticleSystem.particles = [];
 	Player.init(); 
@@ -797,6 +1038,8 @@ const InputManager = {
 			}
 			if (IntroSystem.active || this.startX === -9999 || GameInfo.timeFreeze > 0) return;
 
+			if (Player.isStunned || Player.isSliipping) return;
+
 			const dx = e.clientX - this.startX; const dy = e.clientY - this.startY;
 			const currentTime = new Date().getTime();
 			
@@ -818,13 +1061,15 @@ const InputManager = {
 };
 
 // ==========================================
-// 5. Engine Boot (최종 조립)
+// 5. Engine Boot 
 // ==========================================
 const Engine = {
 	start() {
 		Renderer.init('gameCanvas');
+		
 		Renderer.preRender('elev', ELEV_DATA, Renderer.scale); Renderer.preRender('entrance', ENTRANCE_DATA, Renderer.scale);
 		Renderer.preRender('greenDoor', GREEN_DOOR_DATA, Renderer.scale); Renderer.preRender('yellowDoor', YELLOW_DOOR_DATA, Renderer.scale);
+		Renderer.preRender('door_open', DOOR_OPEN_DATA, Renderer.scale); 
 		Renderer.preRender('beam', BEAM_DATA, 4); Renderer.preRender('camera', CAMERA_DATA, 3); 
 		Renderer.preRender('box', BOX_DATA, 3); Renderer.preRender('driver_idle', DRIVER_IDLE, 3);
 		Renderer.preRender('driver_walk', DRIVER_WALK, 3); Renderer.preRender('driver_lean', DRIVER_LEAN, 3);
@@ -832,21 +1077,27 @@ const Engine = {
 		Renderer.preRender('heart_empty', HEART_EMPTY, 2); Renderer.preRender('bill_1000', BILL_1000, 3); 
 		Renderer.preRender('bill_10000', BILL_10000, 3); Renderer.preRender('bill_50000', BILL_50000, 3); 
 		Renderer.preRender('truck', TRUCK_DATA, 4); 
-		Renderer.preRender('enemy_vase', ENEMY_VASE, 3); Renderer.preRender('enemy_banana', ENEMY_BANANA, 3);
+		Renderer.preRender('enemy_banana', ENEMY_BANANA, 3);
 		Renderer.preRender('enemy_baseball', ENEMY_BASEBALL, 3); 
 		Renderer.preRender('enemy_trashbag', ENEMY_TRASHBAG, 3); 
 		Renderer.preRender('enemy_pigeon1', ENEMY_PIGEON1, 3); Renderer.preRender('enemy_pigeon2', ENEMY_PIGEON2, 3);
 		Renderer.preRender('enemy_cat', ENEMY_CAT, 3);
+		Renderer.preRender('enemy_vase1', ENEMY_VASE1, 3); Renderer.preRender('enemy_vase2', ENEMY_VASE2, 3);
 		
+		Renderer.preRender('med_kid_1', MED_KID_1, 3); Renderer.preRender('med_kid_2', MED_KID_2, 3);
+		Renderer.preRender('med_tosa_1', MED_TOSA_1, 3); Renderer.preRender('med_tosa_2', MED_TOSA_2, 3); 
+		Renderer.preRender('med_kickboard', MED_KICKBOARD, 3);
+		Renderer.preRender('med_blackcat_1', MED_BLACKCAT_1, 3); Renderer.preRender('med_blackcat_2', MED_BLACKCAT_2, 3);
+
 		Renderer.preRender('boss_idle_1', BOSS_IDLE_1, 4); Renderer.preRender('boss_idle_2', BOSS_IDLE_2, 4);
 		Renderer.preRender('driver_bow_1', DRIVER_BOW_1, 4); Renderer.preRender('driver_bow_2', DRIVER_BOW_2, 4);
 		Renderer.preRender('ambulance', AMBULANCE, 4);
-		
-		Renderer.preRender('effect_sweat', EFFECT_SWEAT, 3); // ★ 땀방울 등록
+		Renderer.preRender('effect_sweat', EFFECT_SWEAT, 3); 
 
 		InputManager.init(); Player.init(); IntroSystem.init(); 
 		this.loop();
 	},
+	
 	loop() {
 		if (GameInfo.isGameOver) { 
 			Renderer.clear(); Renderer.ctx.save();
@@ -861,11 +1112,13 @@ const Engine = {
 		else if (ThiefSystem.active) { ThiefSystem.update(); ParticleSystem.update(); } 
 		else if (IntroSystem.active) { IntroSystem.update(); } 
 		else {
-			ParticleSystem.update(); SmallEnemyManager.update(); 
+			ParticleSystem.update(); 
+			SmallEnemyManager.update(); 
+			MediumEnemyManager.update(); 
 			
 			let autoStealTarget = null;
 			GameInfo.droppedBoxes.forEach(b => {
-				if (!b.photographed) {
+				if (!b.photographed && b.isCorrect) {
 					b.timer++;
 					if (b.timer >= 120 && b.floor === Player.currentFloorIndex) {
 						autoStealTarget = b;
@@ -876,7 +1129,7 @@ const Engine = {
 			if (autoStealTarget) {
 				ThiefSystem.start([autoStealTarget], Player.currentFloorIndex, Player.x, false, true);
 			} else if (!GameInfo.isTransitioning) {
-				Player.update();
+				Player.update(); 
 			} else {
 				GameInfo.cameraOffsetY += GameInfo.transitionSpeed;
 				if (GameInfo.cameraOffsetY >= Renderer.gameHeight) {
@@ -891,7 +1144,9 @@ const Engine = {
 		
 		if (!GameInfo.isTransitioning) {
 			Renderer.drawStageBlock(GameInfo.currentStage, 0); Renderer.drawDroppedBoxes(0); 
-			SmallEnemyManager.render(Renderer.ctx, 0); ThiefSystem.render(Renderer.ctx); 
+			SmallEnemyManager.render(Renderer.ctx, 0); 
+			MediumEnemyManager.render(Renderer.ctx, 0); 
+			ThiefSystem.render(Renderer.ctx); 
 			
 			if (IntroSystem.active) {
 				Renderer.ctx.save(); Renderer.ctx.globalAlpha = 1.0 - Math.max(0, IntroSystem.opacity);
@@ -909,7 +1164,7 @@ const Engine = {
 		}
 		
 		Renderer.ctx.restore(); Renderer.drawUI(); 
-		requestAnimationFrame(() => Engine.loop());
+		requestAnimationFrame(() => Engine.loop()); 
 	}
 };
 
