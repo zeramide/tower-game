@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-	<title>Delivery Tower - Cute Chibi Update</title>
+	<title>Delivery Tower - Ultimate BGM & Chibi Update</title>
 	<style>
 		body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Courier New', monospace; }
 		canvas { background: #1a1a1a; box-shadow: 0 0 30px rgba(255,255,255,0.1); image-rendering: pixelated; touch-action: none; }
@@ -14,10 +14,10 @@
 
 <script>
 /**
- * [베테랑 파트너의 그래픽 업그레이드 노트]
- * 1. 로직 안정화 완료: 킥보드/도사견 재등장 로직은 그대로 유지.
- * 2. 2등신 귀요미 화: 중형 적(유치원생, 킥보드, 도사견)의 비율을 머리5:몸통5의 chibi 스타일로 변경.
- * 3. 픽셀 데이터 교체: 한정된 16x16 안에서 머리 볼륨을 극대화하여 동글동글한 느낌을 구현.
+ * [베테랑 파트너의 8비트 사운드 & 최종 통합 노트]
+ * 1. 외부 파일 0%! 순수 JavaScript 오실레이터로 BGM과 효과음을 합성합니다.
+ * 2. 2등신 Chibi 그래픽, 무한 회피, 킥보드 핑퐁, 도사견 문 애니메이션 등 모든 AI가 최적화되어 있습니다.
+ * 3. 터치 조작 시 브라우저 정책을 준수하여 오디오가 최초 시동(Init)됩니다.
  */
 
 // ==========================================
@@ -32,6 +32,7 @@ const PALETTE = {
 
 const A='A', C='C', D='D', E='E', F='F', G='G', B='B', T='T', H='H', U='U', V='V';
 
+// 배경 및 맵 구성요소
 const ELEV_DATA = [[2,2,2,2,2,2,2,2],[2,C,C,2,2,C,C,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2],[2,3,3,1,1,3,3,2]];
 const ENTRANCE_DATA = [[2,2,2,2,2,2,2,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,A,2,2,A,9,2],[2,9,A,2,2,A,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,9,9,2,2,9,9,2],[2,2,2,2,2,2,2,2]];
 const GREEN_DOOR_DATA = [[V,V,V,V,V,V,V,V,V,V,V,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,1,1,U,V],[V,U,U,U,U,U,U,U,1,1,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V],[V,U,U,U,U,U,U,U,U,U,U,V]];
@@ -41,6 +42,7 @@ const BEAM_DATA = [[4,4,4,4], [A,A,A,A], [5,5,5,5], [1,1,1,1]];
 const CAMERA_DATA = [[0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0],[0,0,1,1,5,5,5,5,5,1,1,0,0,0,0,0],[0,1,5,5,5,5,5,5,5,5,5,1,0,0,0,0],[1,5,5,1,1,1,1,1,1,1,5,5,1,0,0,0],[1,5,1,9,9,9,9,9,9,9,1,5,1,0,0,0],[1,5,1,9,1,9,9,9,1,9,1,5,1,0,0,0],[1,5,1,9,1,A,A,A,1,9,1,5,1,0,0,0],[1,5,1,9,1,9,9,9,1,9,1,5,1,0,0,0],[1,5,1,9,9,1,1,1,9,9,1,5,1,0,0,0],[1,5,5,1,1,1,1,1,1,1,5,5,1,0,0,0],[1,5,5,5,5,5,5,5,5,5,5,5,1,0,0,0],[0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0]];
 const BOX_DATA = [[B,B,B,B,B,B,B,B],[B,T,T,T,T,T,T,B],[B,T,B,B,B,B,T,B],[B,T,T,T,T,T,T,B],[B,B,B,B,B,B,B,B],[B,B,B,B,B,B,B,B],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]];
 
+// 기사님
 const DRIVER_IDLE = [[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0], [0,0,0,0,1,1,1,E,E,1,1,1,0,0,0,0], [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0], [0,0,0,0,D,D,D,D,D,D,D,D,0,0,0,0], [0,0,0,0,D,1,D,D,D,D,1,D,0,0,0,0], [0,0,0,0,D,D,D,D,D,D,D,D,0,0,0,0], [0,0,0,0,0,D,D,1,1,D,D,0,0,0,0,0], [0,0,0,0,0,0,D,D,D,D,0,0,0,0,0,0], [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0], [0,0,0,0,1,E,E,1,1,E,E,1,0,0,0,0], [0,0,0,1,1,E,E,1,1,E,E,1,1,0,0,0], [0,0,1,1,0,E,E,1,1,E,E,0,1,1,0,0], [0,0,1,1,0,E,E,E,E,E,E,0,1,1,0,0], [0,F,F,F,0,E,E,E,E,E,E,0,F,F,F,0], [0,F,F,F,0,1,1,1,1,1,1,0,F,F,F,0], [0,0,F,0,0,1,1,1,1,1,1,0,0,F,0,0], [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,G,G,0,0,G,G,0,0,0,0,0], [0,0,0,0,G,G,G,0,0,G,G,G,0,0,0,0], [0,0,0,0,G,G,G,0,0,G,G,G,0,0,0,0]];
 const DRIVER_WALK = [[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0], [0,0,0,0,1,1,1,E,E,1,1,1,0,0,0,0], [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0], [0,0,0,0,D,D,D,D,D,D,D,D,0,0,0,0], [0,0,0,0,D,1,D,D,D,D,1,D,0,0,0,0], [0,0,0,0,D,D,D,D,D,D,D,D,0,0,0,0], [0,0,0,0,0,D,D,1,1,D,D,0,0,0,0,0], [0,0,0,0,0,0,D,D,D,D,0,0,0,0,0,0], [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0], [0,0,0,0,1,E,E,1,1,E,E,1,0,0,0,0], [0,0,0,1,1,E,E,1,1,E,E,1,1,0,0,0], [0,0,1,1,0,E,E,1,1,E,E,0,1,1,0,0], [0,0,1,1,0,E,E,E,E,E,E,0,1,1,0,0], [0,F,F,F,0,E,E,E,E,E,E,0,F,F,F,0], [0,F,F,F,0,1,1,1,1,1,1,0,F,F,F,0], [0,0,F,0,0,1,1,1,1,1,1,0,0,F,0,0], [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,G,G,0,0,0,0,G,G,0,0,0,0], [0,0,0,G,G,G,0,0,0,0,G,G,G,0,0,0], [0,0,0,G,G,G,0,0,0,0,G,G,G,0,0,0]];
 const DRIVER_LEAN = [[0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0], [0,1,1,1,E,E,1,1,1,0,0,0,0,0,0,0], [1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0], [0,0,D,D,D,D,D,D,D,D,0,0,0,0,0,0], [0,0,D,1,D,D,D,D,1,D,0,0,0,0,0,0], [0,0,D,D,D,D,D,D,D,D,0,0,0,0,0,0], [0,0,0,D,D,1,1,D,D,0,0,0,0,0,0,0], [0,0,0,0,D,D,D,D,0,0,0,0,0,0,0,0], [0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0], [0,0,1,E,E,1,1,E,E,1,0,0,0,0,0,0], [0,1,1,E,E,1,1,E,E,1,1,0,0,0,0,0], [1,1,0,E,E,1,1,E,E,0,1,1,0,0,0,0], [1,1,0,E,E,E,E,E,E,0,1,1,0,0,0,0], [F,F,F,0,E,E,E,E,E,E,0,F,F,F,0,0], [F,F,F,0,1,1,1,1,1,1,0,F,F,0,0,0], [0,F,0,0,1,1,1,1,1,1,0,0,F,0,0,0], [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0], [0,0,0,0,0,G,G,0,0,G,G,0,0,0,0,0], [0,0,0,0,G,G,G,0,0,G,G,G,0,0,0,0], [0,0,0,0,G,G,G,0,0,G,G,G,0,0,0,0]];
@@ -54,6 +56,7 @@ const BILL_50000 = [[6,6,6,6,6,6,6,6,6,6], [6,A,A,A,A,A,A,A,A,6], [6,A,6,6,A,A,6
 const TRUCK_DATA = [[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0,0,0,0,0,0], [0,0,0,F,A,A,A,A,A,A,A,A,A,A,A,A,F,0,0,0,0,0,0,0], [0,0,0,F,A,F,F,F,F,F,F,F,F,F,F,A,F,0,0,0,0,0,0,0], [0,0,0,F,A,F,F,F,F,F,F,F,F,F,F,A,F,0,0,0,0,0,0,0], [0,0,0,F,A,F,F,F,F,F,F,F,F,F,F,A,F,9,9,9,0,0,0,0], [0,0,0,F,A,A,A,A,A,A,A,A,A,A,A,A,F,9,A,A,9,0,0,0], [0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,9,A,A,9,0,0,0], [0,0,0,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,0,0], [0,0,0,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,0,0], [0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0], [0,0,0,1,1,F,1,1,0,0,0,0,0,0,0,1,1,F,1,1,0,0,0,0], [0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0]];
 const AMBULANCE = [[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0,0,0,0,0,0],[0,0,0,F,E,E,F,F,F,F,F,F,F,F,C,C,F,0,0,0,0,0,0,0],[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0,0,0],[0,0,0,F,F,F,F,F,F,C,C,F,F,F,F,F,F,F,A,A,F,0,0,0],[0,0,0,F,F,F,F,F,C,C,C,C,F,F,F,F,F,F,A,A,F,0,0,0],[0,0,0,F,F,F,F,F,F,C,C,F,F,F,F,F,F,F,F,F,F,F,0,0],[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0],[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0],[0,0,0,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,0,0],[0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0],[0,0,0,1,1,5,1,1,0,0,0,0,0,0,0,1,1,5,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0]];
 
+// 소형 적 에셋
 const ENEMY_BANANA = [[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,1,0],[0,0,0,0,0,6,0,0],[0,0,6,6,6,0,0,0],[0,6,6,6,6,6,0,0],[0,6,0,0,0,6,6,0],[0,0,0,0,0,0,0,0]];
 const ENEMY_BASEBALL = [[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,A,A,0,0,0],[0,0,A,C,C,A,0,0],[0,A,C,A,A,C,A,0],[0,A,C,A,A,C,A,0],[0,0,A,C,C,A,0,0],[0,0,0,A,A,0,0,0]];
 const ENEMY_PIGEON1 = [[0,0,0,0,0,0,0,0],[0,0,0,5,5,0,0,0],[0,0,C,5,1,5,0,0],[0,0,0,5,5,5,5,0],[0,0,5,A,5,A,5,0],[0,0,5,5,5,5,5,0],[0,0,0,5,5,5,0,0],[0,0,0,6,0,6,0,0]];
@@ -63,7 +66,7 @@ const ENEMY_TRASHBAG = [[0,0,0,0,1,0,0,0],[0,0,0,1,1,1,0,0],[0,0,1,1,3,1,0,0],[0
 const ENEMY_VASE1 = [[0,C,C,0,0,0,0,0],[0,0,U,0,0,0,0,0],[0,0,0,7,8,0,0,0],[0,0,8,7,8,7,0,0],[0,8,7,8,7,8,0,0],[0,7,8,0,8,7,8,0],[0,8,0,0,7,8,8,0],[0,8,8,0,8,8,0,0]];
 const ENEMY_VASE2 = [[0,0,0,C,C,0,0,0],[0,0,0,U,0,0,0,0],[0,0,0,7,8,0,0,0],[0,0,8,7,8,7,0,0],[0,8,7,8,7,8,0,0],[0,7,8,0,8,7,8,0],[0,8,0,0,7,8,8,0],[0,8,8,0,8,8,0,0]];
 
-// ★ 신규 중형 적 에셋 (2등신 큐트 Chibi 스타일)
+// ★ 2등신(Chibi) 형태를 유지하면서 바닥 픽셀을 가장 아래로 보정한 중형 적 에셋
 const MED_KID_1 = [
 	[0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,0,1,6,6,6,6,6,1,0,0,0,0],[0,0,0,0,1,6,6,6,6,6,6,6,1,0,0,0],[0,0,0,0,1,6,1,D,D,D,1,6,1,0,0,0],
 	[0,0,0,0,1,D,D,D,D,D,D,D,1,0,0,0],[0,0,0,0,1,D,1,D,D,D,1,D,1,0,0,0],[0,0,0,0,1,D,D,D,F,D,D,D,1,0,0,0],[0,0,0,0,0,1,D,D,D,D,D,1,0,0,0,0],
@@ -94,15 +97,99 @@ const MED_TOSA_2 = [
 	[0,0,0,1,B,B,B,B,B,B,B,1,0,0,0,0],[0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,1,8,8,8,8,8,1,0,0,0,0,0],[0,0,0,0,1,8,8,8,8,8,1,0,0,0,0,0],
 	[0,0,0,0,1,8,8,8,8,8,1,0,0,0,0,0],[0,0,0,0,0,1,B,0,B,1,0,0,0,0,0,0],[0,0,0,0,0,1,1,0,1,B,1,0,0,0,0,0],[0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0]
 ];
-
 const MED_BLACKCAT_1 = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0],[0,0,0,0,1,1,0,1,1,0,0,0,0,0,0,0],[0,0,0,0,1,F,1,F,1,0,0,0,0,0,0,0],[0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0],[0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0],[0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]];
-const MED_BLACKCAT_2 = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0],[0,0,0,0,1,1,0,1,1,0,0,0,0,0,0,0],[0,0,0,0,1,F,1,F,1,0,0,0,0,0,0,0],[0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0],[0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0],[0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,1,1,0,0,0,1,1,1,1,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]];
+const MED_BLACKCAT_2 = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0],[0,0,0,0,1,1,0,1,1,0,0,0,0,0,0,0],[0,0,0,0,1,F,1,F,1,0,0,0,0,0,0,0],[0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0],[0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0],[0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,1,1,0,0,0,1,1,1,1,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]];
 
 const BOSS_IDLE_1 = [[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,1,D,D,D,D,D,D,1,0,0,0,0],[0,0,0,0,1,D,1,D,D,1,D,1,0,0,0,0],[0,0,0,0,1,D,D,D,D,D,D,1,0,0,0,0],[0,0,0,0,0,1,D,1,1,D,1,0,0,0,0,0],[0,0,0,0,2,2,2,2,2,2,2,2,0,0,0,0],[0,0,0,2,F,2,2,C,C,2,2,F,2,0,0,0],[0,0,2,2,F,2,2,C,C,2,2,F,2,2,0,0],[0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],[0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0],[0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0]];
 const BOSS_IDLE_2 = [[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,1,D,D,D,D,D,D,1,0,0,0,0],[0,0,0,0,1,D,1,D,D,1,D,1,0,0,0,0],[0,0,0,0,1,D,D,D,D,D,D,1,0,0,0,0],[0,0,0,0,0,1,D,1,D,D,1,0,0,0,0,0],[0,0,0,0,2,2,2,2,2,2,2,2,0,0,0,0],[0,0,0,2,F,2,2,C,C,2,2,F,2,0,0,0],[0,0,2,2,F,2,2,C,C,2,2,F,2,2,0,0],[0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],[0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0],[0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0]];
 const DRIVER_BOW_1 = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,0,1,1,E,E,1,1,0,0,0,0,0],[0,0,0,0,0,1,E,E,E,E,1,0,0,0,0,0],[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,E,E,E,E,E,E,E,E,0,0,0,0],[0,0,0,E,E,E,E,E,E,E,E,E,E,0,0,0],[0,0,0,E,E,E,E,E,E,E,E,E,E,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,G,G,G,0,0,0,0,G,G,G,0,0,0],[0,0,0,G,G,G,0,0,0,0,G,G,G,0,0,0]];
 const DRIVER_BOW_2 = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,0,1,1,E,E,1,1,0,0,0,0,0],[0,0,0,0,0,1,E,E,E,E,1,0,0,0,0,0],[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],[0,0,0,0,E,E,E,E,E,E,E,E,0,0,0,0],[0,0,0,E,E,E,E,E,E,E,E,E,E,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0],[0,0,0,G,G,G,0,0,0,0,G,G,G,0,0,0],[0,0,0,G,G,G,0,0,0,0,G,G,G,0,0,0]];
 const EFFECT_SWEAT = [[0,9,0],[9,A,9],[9,9,9],[0,9,0]]; 
+
+
+// ==========================================
+// ★ 신규: Audio System (순수 8비트 사운드 엔진)
+// ==========================================
+const AudioSystem = {
+	ctx: null,
+	isInitialized: false,
+	isBGMPlaying: false,
+
+	// 브라우저 AudioContext 초기화 (유저 상호작용 필수)
+	init() {
+		if (this.isInitialized) return;
+		window.AudioContext = window.AudioContext || window.webkitAudioContext;
+		this.ctx = new AudioContext();
+		this.isInitialized = true;
+	},
+
+	// 톤 제너레이터 (주파수, 파형, 길이, 볼륨)
+	playTone(freq, type, duration, vol = 0.1) {
+		if (!this.ctx || this.ctx.state === 'suspended') return;
+		const osc = this.ctx.createOscillator();
+		const gain = this.ctx.createGain();
+		
+		osc.type = type; 
+		osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+		
+		gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+		gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+
+		osc.connect(gain);
+		gain.connect(this.ctx.destination);
+		
+		osc.start();
+		osc.stop(this.ctx.currentTime + duration);
+	},
+
+	// 1. 점프음 (뾰잉~)
+	playJump() {
+		if (!this.ctx || this.ctx.state === 'suspended') return;
+		const osc = this.ctx.createOscillator();
+		const gain = this.ctx.createGain();
+		osc.type = 'square';
+		osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+		osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.15); 
+		gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+		gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+		
+		osc.connect(gain); gain.connect(this.ctx.destination);
+		osc.start(); osc.stop(this.ctx.currentTime + 0.15);
+	},
+
+	// 2. 피격음 (지직!)
+	playHit() {
+		this.playTone(100, 'sawtooth', 0.2, 0.15);
+	},
+
+	// 3. 사진 찍기 / 득점 (띠링!)
+	playScore() {
+		this.playTone(600, 'square', 0.1, 0.05);
+		setTimeout(() => this.playTone(800, 'square', 0.15, 0.05), 100);
+	},
+
+	// 4. 무한 루프 8비트 BGM (아르페지오)
+	playBGM() {
+		if (!this.ctx || this.isBGMPlaying) return;
+		this.isBGMPlaying = true;
+		// C4, E4, G4, C5 (빠른 레트로 멜로디)
+		const melody = [261.6, 329.6, 392.0, 523.3, 392.0, 329.6, 261.6, 196.0]; 
+		let noteIndex = 0;
+
+		const playNextNote = () => {
+			if (!this.isBGMPlaying || GameInfo.isGameOver) return; // 게임오버 시 재생 중지
+			this.playTone(melody[noteIndex], 'square', 0.15, 0.02);
+			noteIndex = (noteIndex + 1) % melody.length;
+			setTimeout(playNextNote, 200); // 200ms 마다 1노트씩 (BPM 150)
+		};
+		playNextNote();
+	},
+
+	stopBGM() {
+		this.isBGMPlaying = false;
+	}
+};
+
 
 // ==========================================
 // 2. Engine & Map Logic
@@ -133,7 +220,6 @@ const GameInfo = {
 	gameOverTime: 0
 };
 
-// 소형 적 매니저
 const SmallEnemyManager = {
 	enemies: [],
 	initForStage(stage) {
@@ -441,12 +527,14 @@ const ThiefSystem = {
 			this.active = false;
 			this.boxesToSteal.forEach(steal => {
 				GameInfo.life -= 1.0; 
+				AudioSystem.playHit(); // ★ 도둑에게 맞았을 때 사운드
 				let idx = GameInfo.droppedBoxes.indexOf(steal.box);
 				if (idx > -1) GameInfo.droppedBoxes.splice(idx, 1); 
 			});
 			
 			if (GameInfo.life <= 0) { 
 				GameInfo.gameOverReason = 'fired'; GameInfo.isGameOver = true; GameInfo.gameOverTime = Date.now();
+				AudioSystem.stopBGM(); // ★ 게임오버 시 브금 정지
 				return; 
 			}
 
@@ -734,6 +822,7 @@ const Player = {
 		if (this.isGrounded && !this.isStunned && !this.isSlipping) {
 			this.isDodging = false; 
 			this.vy = this.jumpPower; this.isGrounded = false;
+			AudioSystem.playJump(); // ★ 점프 효과음
 		}
 	},
 	dodge() {
@@ -778,7 +867,8 @@ const Player = {
 				GameInfo.score += 1000; ParticleSystem.spawn(snappedBoxX + 12, this.y, 10, true); 
 			} else {
 				GameInfo.life -= 1; 
-				if (GameInfo.life <= 0) { GameInfo.gameOverReason = 'fired'; GameInfo.isGameOver = true; GameInfo.gameOverTime = Date.now(); }
+				AudioSystem.playHit(); // ★ 패널티 효과음
+				if (GameInfo.life <= 0) { GameInfo.gameOverReason = 'fired'; GameInfo.isGameOver = true; GameInfo.gameOverTime = Date.now(); AudioSystem.stopBGM(); }
 			}
 
 			clearTimeout(this.stunTimer);
@@ -816,7 +906,8 @@ const Player = {
 		if (this.packages > 0) {
 			GameInfo.life -= this.packages * 1.0;
 			this.packages = 0; 
-			if (GameInfo.life <= 0) { GameInfo.gameOverReason = 'fired'; GameInfo.isGameOver = true; GameInfo.gameOverTime = Date.now(); return; }
+			AudioSystem.playHit();
+			if (GameInfo.life <= 0) { GameInfo.gameOverReason = 'fired'; GameInfo.isGameOver = true; GameInfo.gameOverTime = Date.now(); AudioSystem.stopBGM(); return; }
 		}
 		GameInfo.isTransitioning = true;
 		this.vx = 0; this.savedVx = 0;
@@ -851,11 +942,13 @@ const Player = {
 							this.isStunned = true; 
 							this.savedVx = this.vx; 
 							this.vx = 0; 
+							AudioSystem.playHit(); // ★ 
 							SmallEnemyManager.enemies.splice(index, 1); 
 							ParticleSystem.spawn(this.x + this.width/2, this.y + this.height/2, 20, true);
 						} else {
 							GameInfo.life -= 0.5; 
-							if (GameInfo.life <= 0) { GameInfo.gameOverReason = 'hospital'; GameInfo.isGameOver = true; GameInfo.gameOverTime = Date.now(); return; }
+							AudioSystem.playHit(); // ★ 
+							if (GameInfo.life <= 0) { GameInfo.gameOverReason = 'hospital'; GameInfo.isGameOver = true; GameInfo.gameOverTime = Date.now(); AudioSystem.stopBGM(); return; }
 							
 							this.isSlipping = true; this.slipTimer = 30; 
 							this.savedVx = this.vx; this.vx = 0;
@@ -877,7 +970,8 @@ const Player = {
 						this.y < e.y + e.height && this.y + this.height > e.y) {
 						
 						GameInfo.life -= 1.0; 
-						if (GameInfo.life <= 0) { GameInfo.gameOverReason = 'hospital'; GameInfo.isGameOver = true; GameInfo.gameOverTime = Date.now(); return; }
+						AudioSystem.playHit(); // ★ 
+						if (GameInfo.life <= 0) { GameInfo.gameOverReason = 'hospital'; GameInfo.isGameOver = true; GameInfo.gameOverTime = Date.now(); AudioSystem.stopBGM(); return; }
 						
 						this.invincibleTimer = 120; 
 						ParticleSystem.spawn(this.x + this.width/2, this.y + this.height/2, 15, true);
@@ -987,12 +1081,15 @@ function restartGame() {
 	ParticleSystem.particles = [];
 	Player.init(); 
 	IntroSystem.init(); 
+	AudioSystem.playBGM(); // ★ 재시작 시 BGM 다시 켜기
 }
 
 function takePhoto() {
 	if (GameInfo.isGameOver || IntroSystem.active || GameInfo.timeFreeze > 0) return;
 	GameInfo.timeFreeze = 30; GameInfo.flashTimer = 5;  
 	
+	AudioSystem.playScore(); // ★ 사진 찰칵 효과음
+
 	let currentBoxes = GameInfo.droppedBoxes.filter(b => b.floor === Player.currentFloorIndex && !b.photographed);
 	currentBoxes.forEach(b => b.photographed = true);
 
@@ -1010,6 +1107,10 @@ const InputManager = {
 	init() {
 		const canvas = document.getElementById('gameCanvas');
 		window.addEventListener('pointerdown', (e) => { 
+			// ★ 모바일 브라우저 사운드 정책 해결: 첫 터치 시 컨텍스트 해제 및 BGM 시작
+			AudioSystem.init();
+			AudioSystem.playBGM();
+
 			const rect = canvas.getBoundingClientRect();
 			const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height;
 			const cx = (e.clientX - rect.left) * scaleX; const cy = (e.clientY - rect.top) * scaleY;
@@ -1038,7 +1139,7 @@ const InputManager = {
 			}
 			if (IntroSystem.active || this.startX === -9999 || GameInfo.timeFreeze > 0) return;
 
-			if (Player.isStunned || Player.isSliipping) return;
+			if (Player.isStunned || Player.isSlipping) return;
 
 			const dx = e.clientX - this.startX; const dy = e.clientY - this.startY;
 			const currentTime = new Date().getTime();
