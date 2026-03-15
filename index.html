@@ -108,7 +108,7 @@ const EFFECT_SWEAT = [[0,9,0],[9,A,9],[9,9,9],[0,9,0]];
 
 
 // ==========================================
-// ★ 신규: Audio System (순수 8비트 사운드 엔진)
+// ★ 신규: Audio System (iOS 사파리 대응 완료)
 // ==========================================
 const AudioSystem = {
 	ctx: null,
@@ -117,15 +117,26 @@ const AudioSystem = {
 
 	// 브라우저 AudioContext 초기화 (유저 상호작용 필수)
 	init() {
-		if (this.isInitialized) return;
-		window.AudioContext = window.AudioContext || window.webkitAudioContext;
-		this.ctx = new AudioContext();
+		// 컨텍스트가 아예 없다면 최초 1회 생성
+		if (!this.ctx) {
+			window.AudioContext = window.AudioContext || window.webkitAudioContext;
+			this.ctx = new AudioContext();
+		}
+		
+		// ★ [iOS 핵심] 아이폰 사파리는 엔진을 생성해도 'suspended(정지)' 상태로 시작합니다.
+		// 유저가 터치했을 때 엔진 상태가 suspended라면 강제로 깨워줍니다(resume).
+		if (this.ctx.state === 'suspended') {
+			this.ctx.resume();
+		}
+		
 		this.isInitialized = true;
 	},
 
 	// 톤 제너레이터 (주파수, 파형, 길이, 볼륨)
 	playTone(freq, type, duration, vol = 0.1) {
+		// 엔진이 없거나 여전히 잠들어있다면 에러 방지를 위해 무시
 		if (!this.ctx || this.ctx.state === 'suspended') return;
+		
 		const osc = this.ctx.createOscillator();
 		const gain = this.ctx.createGain();
 		
@@ -172,15 +183,15 @@ const AudioSystem = {
 	playBGM() {
 		if (!this.ctx || this.isBGMPlaying) return;
 		this.isBGMPlaying = true;
-		// C4, E4, G4, C5 (빠른 레트로 멜로디)
+		
 		const melody = [261.6, 329.6, 392.0, 523.3, 392.0, 329.6, 261.6, 196.0]; 
 		let noteIndex = 0;
 
 		const playNextNote = () => {
-			if (!this.isBGMPlaying || GameInfo.isGameOver) return; // 게임오버 시 재생 중지
+			if (!this.isBGMPlaying || GameInfo.isGameOver) return; 
 			this.playTone(melody[noteIndex], 'square', 0.15, 0.02);
 			noteIndex = (noteIndex + 1) % melody.length;
-			setTimeout(playNextNote, 200); // 200ms 마다 1노트씩 (BPM 150)
+			setTimeout(playNextNote, 200); 
 		};
 		playNextNote();
 	},
@@ -189,7 +200,6 @@ const AudioSystem = {
 		this.isBGMPlaying = false;
 	}
 };
-
 
 // ==========================================
 // 2. Engine & Map Logic
